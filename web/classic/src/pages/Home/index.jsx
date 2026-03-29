@@ -40,6 +40,7 @@ import {
 } from '@douyinfe/semi-icons';
 import { Link } from 'react-router-dom';
 import NoticeModal from '../../components/layout/NoticeModal';
+import FAQ from "./FAQ";
 import {
   Moonshot,
   OpenAI,
@@ -330,6 +331,7 @@ const Home = () => {
                     </div>
                   </div>
                 </div>
+                <FAQ />
               </div>
             </div>
           </div>
