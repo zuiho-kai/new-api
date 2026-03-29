@@ -5,13 +5,7 @@ const BASE_URL = window.location.origin;
 const faqData = [
   {
     q: "可以用来做什么？",
-    a: `<strong>🎭 娱乐创作</strong>：角色扮演、小说写作、剧本创作、创意文案<br/><br/>
-<strong>💻 编程开发</strong>：AI 编程助手、代码审查、Bug 修复、算法设计、自动化脚本、API 对接<br/><br/>
-<strong>📚 学习研究</strong>：科研论文分析与撰写、实验数据处理、文献综述、学术翻译、数学物理化学问题解答、考研/考公备考<br/><br/>
-<strong>📊 数据处理</strong>：数据分析、Excel/SQL 公式生成、报表自动化、数据清洗转换、BI 报告生成、爬虫脚本<br/><br/>
-<strong>🎨 图像生成</strong>：AI 绘图（gemini-3.1-flash-image）、设计灵感、Logo 设计、插画创作<br/><br/>
-<strong>💼 办公效率</strong>：会议纪要、邮件撰写、PPT 大纲、演讲稿、合同审阅、法律咨询<br/><br/>
-<strong>🌐 更多场景</strong>：客服机器人、智能问答、知识库、内容审核、情感分析、舆情监控...`
+    a: `<strong>🎭 娱乐创作</strong>：角色扮演、小说写作、剧本创作、创意文案<br/><br/><strong>💻 编程开发</strong>：AI 编程助手、代码审查、Bug 修复、算法设计、自动化脚本、API 对接<br/><br/><strong>📚 学习研究</strong>：科研论文分析与撰写、实验数据处理、文献综述、学术翻译、数学物理化学问题解答、考研/考公备考<br/><br/><strong>📊 数据处理</strong>：数据分析、Excel/SQL 公式生成、报表自动化、数据清洗转换、BI 报告生成、爬虫脚本<br/><br/><strong>🎨 图像生成</strong>：AI 绘图（gemini-3.1-flash-image）、设计灵感、Logo 设计、插画创作<br/><br/><strong>💼 办公效率</strong>：会议纪要、邮件撰写、PPT 大纲、演讲稿、合同审阅、法律咨询<br/><br/><strong>🌐 更多场景</strong>：客服机器人、智能问答、知识库、内容审核、情感分析、舆情监控...`
   },
   {
     q: "Claude Code 怎么用 Opus 1M 超长上下文？",
@@ -67,118 +61,137 @@ const faqData = [
   }
 ];
 
-const ChevronIcon = ({ isOpen }) => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    style={{
-      flexShrink: 0,
-      transition: "transform 0.3s ease",
-      transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-      opacity: 0.5,
-    }}
-  >
-    <path d="M19 9l-7 7-7-7" />
-  </svg>
-);
-
-const FAQItem = ({ question, answer, isOpen, onClick }) => (
-  <div
-    style={{
-      border: "1px solid var(--semi-color-border)",
-      borderRadius: 12,
-      overflow: "hidden",
-      transition: "border-color 0.2s ease",
-    }}
-  >
-    <button
-      onClick={onClick}
-      style={{
-        width: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 16,
-        padding: "16px 20px",
-        textAlign: "left",
-        background: "transparent",
-        border: "none",
-        cursor: "pointer",
-        color: "var(--semi-color-text-0)",
-        fontSize: 15,
-        fontWeight: 500,
-        transition: "background-color 0.2s ease",
-      }}
-      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--semi-color-fill-0)"}
-      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
-    >
-      <span>{question}</span>
-      <ChevronIcon isOpen={isOpen} />
-    </button>
-    {isOpen && (
-      <div
-        style={{
-          padding: "0 20px 16px",
-          fontSize: 14,
-          lineHeight: 1.8,
-          color: "var(--semi-color-text-1)",
-          borderTop: "1px solid var(--semi-color-border)",
-          background: "var(--semi-color-fill-0)",
-        }}
-      >
-        <div
-          style={{ paddingTop: 14 }}
-          dangerouslySetInnerHTML={{ __html: answer }}
-        />
-      </div>
-    )}
-  </div>
-);
+const faqStyles = `
+.hive-faq-wrap {
+  width: 100%;
+  padding: 48px 24px;
+  box-sizing: border-box;
+}
+.hive-faq-inner {
+  max-width: 768px;
+  width: 100%;
+  margin: 0 auto;
+}
+.hive-faq-title {
+  text-align: center;
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--semi-color-text-0);
+}
+.hive-faq-subtitle {
+  text-align: center;
+  margin: 0 0 28px;
+  color: var(--semi-color-text-2);
+  font-size: 15px;
+}
+.hive-faq-list {
+  display: block;
+}
+.hive-faq-item {
+  border: 1px solid var(--semi-color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.hive-faq-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--semi-color-text-0);
+  font-size: 15px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: background-color 0.2s ease;
+  box-sizing: border-box;
+}
+.hive-faq-btn:hover {
+  background-color: var(--semi-color-fill-0);
+}
+.hive-faq-chevron {
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+  opacity: 0.5;
+  width: 20px;
+  height: 20px;
+}
+.hive-faq-chevron.open {
+  transform: rotate(180deg);
+}
+.hive-faq-answer {
+  padding: 0 20px 16px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--semi-color-text-1);
+  border-top: 1px solid var(--semi-color-border);
+  background: var(--semi-color-fill-0);
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+.hive-faq-answer code {
+  background: var(--semi-color-fill-1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.hive-faq-answer-inner {
+  padding-top: 14px;
+}
+`;
 
 const FAQ = () => {
   const [openIndex, setOpenIndex] = useState(null);
 
   return (
-    <div style={{ maxWidth: 800, margin: "0 auto", padding: "48px 16px" }}>
-      <h2
-        style={{
-          textAlign: "center",
-          fontSize: 26,
-          fontWeight: 700,
-          marginBottom: 8,
-          color: "var(--semi-color-text-0)",
-        }}
-      >
-        ❓ 常见问题
-      </h2>
-      <p
-        style={{
-          textAlign: "center",
-          marginBottom: 28,
-          color: "var(--semi-color-text-2)",
-          fontSize: 15,
-        }}
-      >
-        遇到问题？先看这里
-      </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {faqData.map((item, idx) => (
-          <FAQItem
-            key={idx}
-            question={item.q}
-            answer={item.a}
-            isOpen={openIndex === idx}
-            onClick={() => setOpenIndex(openIndex === idx ? null : idx)}
-          />
-        ))}
+    <>
+      <style>{faqStyles}</style>
+      <div className="hive-faq-wrap">
+        <div className="hive-faq-inner">
+          <h2 className="hive-faq-title">❓ 常见问题</h2>
+          <p className="hive-faq-subtitle">遇到问题？先看这里</p>
+          <div className="hive-faq-list">
+            {faqData.map((item, idx) => (
+              <div className="hive-faq-item" key={idx}>
+                <button
+                  className="hive-faq-btn"
+                  onClick={() => setOpenIndex(openIndex === idx ? null : idx)}
+                >
+                  <span>{item.q}</span>
+                  <svg
+                    className={`hive-faq-chevron${openIndex === idx ? " open" : ""}`}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {openIndex === idx && (
+                  <div className="hive-faq-answer">
+                    <div
+                      className="hive-faq-answer-inner"
+                      dangerouslySetInnerHTML={{ __html: item.a }}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
