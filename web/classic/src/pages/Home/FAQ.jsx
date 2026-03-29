@@ -1,8 +1,4 @@
 import React, { useState } from "react";
-import { Typography } from "@douyinfe/semi-ui";
-import { useTranslation } from "react-i18next";
-
-const { Text } = Typography;
 
 const BASE_URL = window.location.origin;
 
@@ -22,16 +18,16 @@ const faqData = [
     a: `有两种方式：<br/><br/><strong>方式一：settings.json 配置（推荐）</strong><br/>编辑 <code>~/.claude/settings.json</code>，设置 <code>"model": "opus[1m]"</code>，详见下方 Claude Code 教程。<br/><br/><strong>方式二：CLI 中手动切换</strong><br/>在 Claude Code 运行时，输入 <code>/model</code> 命令，然后选择或手动输入 <code>opus[1m]</code> 即可切换到 1M 上下文。<br/><br/>💡 <code>opus[1m]</code> 表示使用 Claude Opus 模型并开启 1M token 超长上下文窗口，适合处理大型代码库和长对话。`
   },
   {
-    q: "Claude Code 报 Unable to connect to Anthropic services / 401 Invalid token 怎么办？",
+    q: "Claude Code 报 Unable to connect / 401 Invalid token 怎么办？",
     a: `如果你是 <strong>Windows 原生环境</strong>，很多时候不是 Key 错，而是本地 <code>.claude.json</code> 没有正确刷新。<br/><br/><strong>建议按下面顺序处理：</strong><br/>1. 备份并删除 <code>C:\Users\你的用户名\.claude.json</code><br/>2. 重新打开 Claude Code，在弹出的 <code>yes/no(recommended)</code> 里选择 <code>yes</code><br/>3. 如果还不行，再检查 <code>.claude.json</code> 里是否包含 <code>"hasCompletedOnboarding": true</code><br/><br/>如果仍报错，再回头检查 <code>ANTHROPIC_BASE_URL</code> 是否误加了 <code>/v1</code>。`
   },
   {
     q: "怎么查询用量和剩余额度？",
-    a: `登录后台，在「令牌」页面可以查看每个 Key 的已用量和剩余额度。`
+    a: "登录后台，在「令牌」页面可以查看每个 Key 的已用量和剩余额度。"
   },
   {
     q: "为什么连不上 / 测试报错？",
-    a: `请检查：<br/>1. 网址是否复制了多余的空格？<br/>2. Key 是否复制完整？<br/>3. 接口地址可能需要或不需要 <code>/v1</code> 后缀，建议尝试添加或去除。`
+    a: "请检查：<br/>1. 网址是否复制了多余的空格？<br/>2. Key 是否复制完整？<br/>3. 接口地址可能需要或不需要 <code>/v1</code> 后缀，建议尝试添加或去除。"
   },
   {
     q: "接口地址要加 /v1 吗？",
@@ -63,7 +59,7 @@ const faqData = [
   },
   {
     q: "Claude Code 跑一个任务，为什么次数消耗了很多次？",
-    a: `这是<strong>完全正常的行为</strong>。Claude Code 是一个 <strong>Agent（自主智能体）</strong>，不是普通的一问一答聊天机器人。<strong>1 个任务 ≠ 1 次 API 调用</strong>，这是所有 Agent 类产品的基本工作方式。<br/><br/><strong>🔄 工作原理：</strong><br/>当你给 Claude Code 一个任务（比如「修复这个 Bug」），它会<strong>自主决策</strong>并循环执行多个步骤，每个步骤都是一次独立的 API 调用：<br/><br/>1. 📖 读取代码文件 → 1 次调用<br/>2. 🔍 搜索相关代码 → 1 次调用<br/>3. 🧠 分析并决定方案 → 1 次调用<br/>4. ✏️ 编写代码 → 1 次调用<br/>5. 🧪 运行测试验证 → 1 次调用<br/>... 循环直到任务完成<br/><br/><strong>💡 省次数的小技巧：</strong><br/>• 给出<strong>清晰、具体</strong>的指令，减少试错<br/>• 用 <code>/compact</code> 命令压缩上下文<br/>• 复杂任务拆成多个小任务<br/>• 用 <code>CLAUDE.md</code> 文件预设项目规范`
+    a: `这是<strong>完全正常的行为</strong>。Claude Code 是一个 <strong>Agent（自主智能体）</strong>，不是普通的一问一答聊天机器人。<strong>1 个任务 ≠ 1 次 API 调用</strong>。<br/><br/><strong>🔄 工作原理：</strong><br/>当你给 Claude Code 一个任务（比如「修复这个 Bug」），它会<strong>自主决策</strong>并循环执行多个步骤：<br/><br/>1. 📖 读取代码文件 → 1 次调用<br/>2. 🔍 搜索相关代码 → 1 次调用<br/>3. 🧠 分析并决定方案 → 1 次调用<br/>4. ✏️ 编写代码 → 1 次调用<br/>5. 🧪 运行测试验证 → 1 次调用<br/>... 循环直到任务完成<br/><br/><strong>💡 省次数的小技巧：</strong><br/>• 给出<strong>清晰、具体</strong>的指令，减少试错<br/>• 用 <code>/compact</code> 命令压缩上下文<br/>• 复杂任务拆成多个小任务<br/>• 用 <code>CLAUDE.md</code> 文件预设项目规范`
   },
   {
     q: "支持退款吗？",
@@ -71,13 +67,34 @@ const faqData = [
   }
 ];
 
+const ChevronIcon = ({ isOpen }) => (
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{
+      flexShrink: 0,
+      transition: "transform 0.3s ease",
+      transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+      opacity: 0.5,
+    }}
+  >
+    <path d="M19 9l-7 7-7-7" />
+  </svg>
+);
+
 const FAQItem = ({ question, answer, isOpen, onClick }) => (
   <div
     style={{
       border: "1px solid var(--semi-color-border)",
       borderRadius: 12,
       overflow: "hidden",
-      marginBottom: 12,
+      transition: "border-color 0.2s ease",
     }}
   >
     <button
@@ -96,19 +113,13 @@ const FAQItem = ({ question, answer, isOpen, onClick }) => (
         color: "var(--semi-color-text-0)",
         fontSize: 15,
         fontWeight: 500,
+        transition: "background-color 0.2s ease",
       }}
+      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--semi-color-fill-0)"}
+      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
     >
       <span>{question}</span>
-      <span
-        style={{
-          transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-          transition: "transform 0.3s",
-          flexShrink: 0,
-          fontSize: 12,
-        }}
-      >
-        ▼
-      </span>
+      <ChevronIcon isOpen={isOpen} />
     </button>
     {isOpen && (
       <div
@@ -118,10 +129,11 @@ const FAQItem = ({ question, answer, isOpen, onClick }) => (
           lineHeight: 1.8,
           color: "var(--semi-color-text-1)",
           borderTop: "1px solid var(--semi-color-border)",
+          background: "var(--semi-color-fill-0)",
         }}
       >
         <div
-          style={{ paddingTop: 12 }}
+          style={{ paddingTop: 14 }}
           dangerouslySetInnerHTML={{ __html: answer }}
         />
       </div>
@@ -133,17 +145,11 @@ const FAQ = () => {
   const [openIndex, setOpenIndex] = useState(null);
 
   return (
-    <div
-      style={{
-        maxWidth: 800,
-        margin: "0 auto",
-        padding: "48px 16px",
-      }}
-    >
+    <div style={{ maxWidth: 800, margin: "0 auto", padding: "48px 16px" }}>
       <h2
         style={{
           textAlign: "center",
-          fontSize: 28,
+          fontSize: 26,
           fontWeight: 700,
           marginBottom: 8,
           color: "var(--semi-color-text-0)",
@@ -154,22 +160,24 @@ const FAQ = () => {
       <p
         style={{
           textAlign: "center",
-          marginBottom: 32,
+          marginBottom: 28,
           color: "var(--semi-color-text-2)",
           fontSize: 15,
         }}
       >
         遇到问题？先看这里
       </p>
-      {faqData.map((item, idx) => (
-        <FAQItem
-          key={idx}
-          question={item.q}
-          answer={item.a}
-          isOpen={openIndex === idx}
-          onClick={() => setOpenIndex(openIndex === idx ? null : idx)}
-        />
-      ))}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {faqData.map((item, idx) => (
+          <FAQItem
+            key={idx}
+            question={item.q}
+            answer={item.a}
+            isOpen={openIndex === idx}
+            onClick={() => setOpenIndex(openIndex === idx ? null : idx)}
+          />
+        ))}
+      </div>
     </div>
   );
 };
