@@ -38,7 +38,7 @@ const faqData = [
     a: `<strong>大部分工具需要加 /v1</strong>：<br/>SillyTavern、ChatBox、OpenCat、Cline、Cursor、OpenCode 等工具的接口地址填：<br/><code>${BASE_URL}/v1</code><br/><br/><strong>⚠️ Claude Code 不加 /v1</strong>：<br/>Claude Code 的 <code>ANTHROPIC_BASE_URL</code> 填的是不带 /v1 的地址：<br/><code>${BASE_URL}</code><br/>如果配错会报连接错误，请仔细检查。`
   },
   {
-    q: 报错 Model not found 怎么办？,
+    q: "报错 Model not found 怎么办？",
     a: `请确保模型名称完全正确，一个字符都不能错。<br/><br/>你可以用以下命令查看你的 Key 可用的所有模型：<br/><code>curl -s ${BASE_URL}/v1/models -H "Authorization: Bearer sk-你的Key"</code>`
   },
   {
