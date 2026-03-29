@@ -43,24 +43,29 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      packages: read
     steps:
       - name: Deploy to server
         uses: appleboy/ssh-action@v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: root
           key: ${{ secrets.SERVER_SSH_KEY }}
+          envs: GH_TOKEN
           script: |
-            docker tag calciumion/new-api:latest calciumion/new-api:backup 2>/dev/null || true
+            echo "$GH_TOKEN" | docker login ghcr.io -u zuiho-kai --password-stdin
             docker pull ghcr.io/zuiho-kai/new-api-custom:latest
             cd /opt/new-api
             sed -i 's|image: calciumion/new-api:latest|image: ghcr.io/zuiho-kai/new-api-custom:latest|g' docker-compose.yml
             docker compose up -d new-api
             sleep 5
             if docker ps | grep -q new-api; then
-              echo 'Deploy success!'
+              echo "Deploy success!"
             else
-              echo 'Deploy failed, rolling back...'
+              echo "Deploy failed, rolling back..."
               sed -i 's|image: ghcr.io/zuiho-kai/new-api-custom:latest|image: calciumion/new-api:latest|g' docker-compose.yml
               docker compose up -d new-api
               exit 1
