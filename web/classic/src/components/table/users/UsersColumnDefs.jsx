@@ -353,6 +353,11 @@ export const getUsersColumns = ({
       },
     },
     {
+      title: 'IP',
+      dataIndex: 'last_ip',
+      render: (text) => text ? <Tag color='white' shape='circle' className='!text-xs'>{text}</Tag> : '-',
+    },
+    {
       title: t('邀请信息'),
       dataIndex: 'invite',
       render: (text, record, index) => renderInviteInfo(text, record, t),

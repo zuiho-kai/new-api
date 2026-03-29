@@ -53,6 +53,7 @@ type User struct {
 	CreatedAt        int64                      `json:"created_at" gorm:"autoCreateTime;column:created_at"`
 	LastLoginAt      int64                      `json:"last_login_at" gorm:"default:0;column:last_login_at"`
 	AdminPermissions map[string]map[string]bool `json:"admin_permissions,omitempty" gorm:"-:all"`
+	LastIp           string                     `json:"last_ip" gorm:"-"`
 }
 
 func (user *User) ToBaseUser() *UserBase {
@@ -206,6 +207,35 @@ func GetMaxUserId() int {
 	return user.Id
 }
 
+
+type userLastIp struct {
+	UserId int    `gorm:"column:user_id"`
+	Ip     string `gorm:"column:ip"`
+}
+
+func fillUsersLastIp(users []*User) {
+	if len(users) == 0 {
+		return
+	}
+	userIds := make([]int, len(users))
+	for i, u := range users {
+		userIds[i] = u.Id
+	}
+	var lastIps []userLastIp
+	LOG_DB.Raw(`SELECT l.user_id, l.ip FROM logs l
+		INNER JOIN (SELECT user_id, MAX(id) as max_id FROM logs WHERE user_id IN ? AND ip != '' GROUP BY user_id) sub
+		ON l.id = sub.max_id`, userIds).Scan(&lastIps)
+	ipMap := make(map[int]string)
+	for _, item := range lastIps {
+		ipMap[item.UserId] = item.Ip
+	}
+	for _, u := range users {
+		if ip, ok := ipMap[u.Id]; ok {
+			u.LastIp = ip
+		}
+	}
+}
+
 func GetAllUsers(pageInfo *common.PageInfo) (users []*User, total int64, err error) {
 	// Start transaction
 	tx := DB.Begin()
@@ -231,6 +261,8 @@ func GetAllUsers(pageInfo *common.PageInfo) (users []*User, total int64, err err
 		tx.Rollback()
 		return nil, 0, err
 	}
+
+	fillUsersLastIp(users)
 
 	// Commit transaction
 	if err = tx.Commit().Error; err != nil {
