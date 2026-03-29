@@ -48,6 +48,7 @@ const routerMap = {
   models: '/console/models',
   deployment: '/console/deployment',
   playground: '/console/playground',
+  ipanalysis: "/console/ip-analysis",
   personal: '/console/personal',
 };
 
@@ -182,6 +183,12 @@ const SiderBar = ({ onNavigate = () => {} }) => {
         itemKey: 'user',
         to: '/user',
         className: isAdmin() ? '' : 'tableHiddle',
+      },
+      {
+        text: t("IP 分析"),
+        itemKey: "ipanalysis",
+        to: "/ip-analysis",
+        className: isAdmin() ? "" : "tableHiddle",
       },
       {
         text: t('系统设置'),
