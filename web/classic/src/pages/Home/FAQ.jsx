@@ -36,20 +36,8 @@ const faqData = [
     a: "Thinking 版本（如 gemini-2.5-flash-thinking、claude-opus-4-6-thinking）会在回答前进行深度思考，推理能力更强，适合处理数学、代码和复杂逻辑问题。响应时间可能稍长，但质量显著提升。"
   },
   {
-    q: "Gemini 3.1 Pro High/Low 区别？",
-    a: "<strong>High (满血版)</strong>：拥有极致的推理性能，适合处理超复杂的逻辑任务，更聪明。<br/><strong>Low (极速版)</strong>：进行了速度与性能的平衡优化，响应更快，性价比更高，足以应对绝大多数场景。"
-  },
-  {
-    q: "图片模型怎么选尺寸？",
-    a: `<code>gemini-3.1-flash-image</code> 支持多种尺寸变体，在模型名后加后缀即可：<br/><br/><strong>比例变体：</strong><br/>• <code>gemini-3.1-flash-image</code> — 默认比例<br/>• <code>gemini-3.1-flash-image-16x9</code> — 横屏宽幅<br/>• <code>gemini-3.1-flash-image-9x16</code> — 竖屏长图<br/>• <code>gemini-3.1-flash-image-1x1</code> — 正方形<br/>• <code>gemini-3.1-flash-image-4x3</code> / <code>3x4</code> — 经典比例<br/>• <code>gemini-3.1-flash-image-21x9</code> — 超宽幅`
-  },
-  {
     q: "密钥会过期吗？",
     a: "<strong>次数套餐</strong>：永不过期。<br/><strong>时间套餐</strong>（日卡/周卡）：到期后失效。"
-  },
-  {
-    q: "时间套餐的速率限制是怎么计算的？",
-    a: `时间套餐采用<strong>滑动窗口</strong>机制计算速率限制，而不是固定时间段重置。<br/><br/><strong>举例说明：</strong><br/>假设套餐限制为「3 小时内最多 80 次请求」：<br/>• 你在 14:00 开始使用，到 14:30 已经用了 80 次<br/>• 此时会提示速率超限，需要等待<br/>• 但不需要等到 17:00（3 小时后）才能继续<br/>• 系统会持续滑动统计最近 3 小时内的请求数，只要最近 3 小时内累计不超过 80 次就可以继续<br/><br/>💡 简单理解：不是「每 3 小时重置一次」，而是「任意连续 3 小时内不超过上限」。合理分散使用，几乎不会触发限制。`
   },
   {
     q: "Claude Code 跑一个任务，为什么次数消耗了很多次？",
