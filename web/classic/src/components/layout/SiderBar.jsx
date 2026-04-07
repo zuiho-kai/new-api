@@ -37,6 +37,7 @@ const routerMap = {
   redemption: '/console/redemption',
   topup: '/console/topup',
   user: '/console/user',
+  ranking: '/console/consumption-ranking',
   subscription: '/console/subscription',
   log: '/console/log',
   midjourney: '/console/midjourney',
@@ -48,7 +49,6 @@ const routerMap = {
   models: '/console/models',
   deployment: '/console/deployment',
   playground: '/console/playground',
-  ipanalysis: "/console/ip-analysis",
   personal: '/console/personal',
 };
 
@@ -185,10 +185,10 @@ const SiderBar = ({ onNavigate = () => {} }) => {
         className: isAdmin() ? '' : 'tableHiddle',
       },
       {
-        text: t("IP 分析"),
-        itemKey: "ipanalysis",
-        to: "/ip-analysis",
-        className: isAdmin() ? "" : "tableHiddle",
+        text: t('消费排行榜'),
+        itemKey: 'ranking',
+        to: '/console/consumption-ranking',
+        className: isAdmin() ? '' : 'tableHiddle',
       },
       {
         text: t('系统设置'),

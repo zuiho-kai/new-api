@@ -51,9 +51,9 @@ export const DEFAULT_ADMIN_CONFIG = {
     deployment: true,
     redemption: true,
     user: true,
+    ranking: true,
     subscription: true,
     setting: true,
-    ipanalysis: true,
   },
 };
 

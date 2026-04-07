@@ -671,6 +671,105 @@ func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelNa
 	return stat, nil
 }
 
+// UserConsumptionRankingItem 用户消费排行榜单条记录（定制功能）
+type UserConsumptionRankingItem struct {
+	Rank         int    `json:"rank"`
+	UserId       int    `json:"user_id"`
+	Username     string `json:"username"`
+	DisplayName  string `json:"display_name"`
+	TotalQuota   int64  `json:"total_quota"`
+	RequestCount int64  `json:"request_count"`
+}
+
+// GetUserConsumptionRanking 按用户聚合指定时间范围内的消费，按 quota 降序返回分页结果。
+// 仅统计 LogTypeConsume 类型日志。startTs/endTs 为 Unix 秒，0 表示不限制。
+// 跨库兼容：只用 GORM Table + Select 通用语法，不使用任何数据库专有函数。
+func GetUserConsumptionRanking(startTs, endTs int64, page, pageSize int) ([]UserConsumptionRankingItem, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	if pageSize > 200 {
+		pageSize = 200
+	}
+
+	baseWhere := LOG_DB.Table("logs").Where("type = ?", LogTypeConsume)
+	if startTs > 0 {
+		baseWhere = baseWhere.Where("created_at >= ?", startTs)
+	}
+	if endTs > 0 {
+		baseWhere = baseWhere.Where("created_at <= ?", endTs)
+	}
+
+	// 统计不同 user_id 数量作为 total
+	var total int64
+	if err := baseWhere.Session(&gorm.Session{}).
+		Distinct("user_id").Count(&total).Error; err != nil {
+		common.SysError("failed to count consumption ranking: " + err.Error())
+		return nil, 0, errors.New("查询排行榜失败")
+	}
+
+	// 聚合查询：按 user_id 分组，MAX(username) 取一个展示名，避免重名问题
+	type aggRow struct {
+		UserId       int    `gorm:"column:user_id"`
+		Username     string `gorm:"column:username"`
+		TotalQuota   int64  `gorm:"column:total_quota"`
+		RequestCount int64  `gorm:"column:request_count"`
+	}
+	var rows []aggRow
+	offset := (page - 1) * pageSize
+	err := baseWhere.Session(&gorm.Session{}).
+		Select("user_id, MAX(username) AS username, SUM(quota) AS total_quota, COUNT(*) AS request_count").
+		Group("user_id").
+		Order("total_quota DESC").
+		Limit(pageSize).
+		Offset(offset).
+		Scan(&rows).Error
+	if err != nil {
+		common.SysError("failed to query consumption ranking: " + err.Error())
+		return nil, 0, errors.New("查询排行榜失败")
+	}
+
+	items := make([]UserConsumptionRankingItem, 0, len(rows))
+	if len(rows) == 0 {
+		return items, total, nil
+	}
+
+	// 批量查 display_name，避免 N+1（参考 fillUsersLastIp 的批量填充风格）
+	userIds := make([]int, 0, len(rows))
+	for _, r := range rows {
+		userIds = append(userIds, r.UserId)
+	}
+	type userNameRow struct {
+		Id          int    `gorm:"column:id"`
+		DisplayName string `gorm:"column:display_name"`
+	}
+	var users []userNameRow
+	if err := DB.Table("users").Select("id, display_name").
+		Where("id IN ?", userIds).Scan(&users).Error; err != nil {
+		common.SysError("failed to fetch display names: " + err.Error())
+		// 不致命，降级为空 display_name
+	}
+	nameMap := make(map[int]string, len(users))
+	for _, u := range users {
+		nameMap[u.Id] = u.DisplayName
+	}
+
+	for i, r := range rows {
+		items = append(items, UserConsumptionRankingItem{
+			Rank:         offset + i + 1,
+			UserId:       r.UserId,
+			Username:     r.Username,
+			DisplayName:  nameMap[r.UserId],
+			TotalQuota:   r.TotalQuota,
+			RequestCount: r.RequestCount,
+		})
+	}
+	return items, total, nil
+}
+
 func SumUsedToken(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string) (token int) {
 	tx := LOG_DB.Table("logs").Select("COALESCE(sum(prompt_tokens), 0) + COALESCE(sum(completion_tokens), 0)")
 	if username != "" {

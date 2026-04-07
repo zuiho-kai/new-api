@@ -45,12 +45,12 @@ import ModelPage from './pages/Model';
 import ModelDeploymentPage from './pages/ModelDeployment';
 import Playground from './pages/Playground';
 import Subscription from './pages/Subscription';
-import IPAnalysis from "./pages/IPAnalysis";
 import OAuth2Callback from './components/auth/OAuth2Callback';
 import PersonalSetting from './components/settings/PersonalSetting';
 import Setup from './pages/Setup';
 import SetupCheck from './components/layout/SetupCheck';
 
+const ConsumptionRanking = lazy(() => import('./pages/ConsumptionRanking'));
 const Home = lazy(() => import('./pages/Home'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const About = lazy(() => import('./pages/About'));
@@ -141,6 +141,16 @@ function App() {
           }
         />
         <Route
+          path='/console/consumption-ranking'
+          element={
+            <AdminRoute>
+              <Suspense fallback={<Loading></Loading>} key={location.pathname}>
+                <ConsumptionRanking />
+              </Suspense>
+            </AdminRoute>
+          }
+        />
+        <Route
           path='/console/token'
           element={
             <PrivateRoute>
@@ -169,14 +179,6 @@ function App() {
           element={
             <AdminRoute>
               <User />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/console/ip-analysis"
-          element={
-            <AdminRoute>
-              <IPAnalysis />
             </AdminRoute>
           }
         />
