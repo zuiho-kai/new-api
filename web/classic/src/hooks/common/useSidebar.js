@@ -53,6 +53,7 @@ export const DEFAULT_ADMIN_CONFIG = {
     user: true,
     ranking: true,
     subscription: true,
+    ipanalysis: true,
     setting: true,
   },
 };

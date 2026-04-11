@@ -45,6 +45,7 @@ import ModelPage from './pages/Model';
 import ModelDeploymentPage from './pages/ModelDeployment';
 import Playground from './pages/Playground';
 import Subscription from './pages/Subscription';
+import IPAnalysis from './pages/IPAnalysis';
 import OAuth2Callback from './components/auth/OAuth2Callback';
 import PersonalSetting from './components/settings/PersonalSetting';
 import Setup from './pages/Setup';
@@ -147,6 +148,14 @@ function App() {
               <Suspense fallback={<Loading></Loading>} key={location.pathname}>
                 <ConsumptionRanking />
               </Suspense>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path='/console/ip-analysis'
+          element={
+            <AdminRoute>
+              <IPAnalysis />
             </AdminRoute>
           }
         />
