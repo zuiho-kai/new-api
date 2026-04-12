@@ -197,6 +197,9 @@ const EditTokenModal = (props) => {
         loadToken();
       } else {
         formApiRef.current?.setValues(getInitValues());
+        if (statusState?.status?.default_use_auto_group && formApiRef.current) {
+          formApiRef.current.setValue('cross_group_retry', true);
+        }
       }
     } else {
       formApiRef.current?.reset();
