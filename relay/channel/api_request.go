@@ -514,12 +514,29 @@ func doRequest(c *gin.Context, req *http.Request, info *common.RelayInfo) (*http
 		}
 	}
 
+	// 非流请求：脱离客户端 context，使用独立 400s timeout。
+	// 原因：上游（如部分 Claude 中转）非流会憋住连接直到完整响应生成，耗时 ~90-150s，
+	// 常超过客户端默认 timeout。客户端断开会连带取消上游请求，但上游仍会向源头拿完整响应并全额计费，
+	// 本地却因 context canceled 无记录无计费，导致对账偏差。detach 后让请求走完，按真实 usage 正常扣费。
+	var detachedCancel context.CancelFunc
+	if !info.IsStream {
+		var detachedCtx context.Context
+		detachedCtx, detachedCancel = context.WithTimeout(context.Background(), 400*time.Second)
+		req = req.WithContext(detachedCtx)
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
+		if detachedCancel != nil {
+			detachedCancel()
+		}
 		logger.LogError(c, "do request failed: "+err.Error())
 		return nil, types.NewError(err, types.ErrorCodeDoRequestFailed, types.ErrOptionWithHideErrMsg("upstream error: do request failed"))
 	}
 	if resp == nil {
+		if detachedCancel != nil {
+			detachedCancel()
+		}
 		return nil, errors.New("resp is nil")
 	}
 
@@ -527,9 +544,27 @@ func doRequest(c *gin.Context, req *http.Request, info *common.RelayInfo) (*http
 		c.Set(common2.UpstreamRequestIdKey, upID)
 	}
 
+	// 把 cancel 绑到 resp.Body 的 Close，确保响应读完或调用方主动关闭后才释放 context
+	if detachedCancel != nil {
+		resp.Body = &cancelOnCloseBody{ReadCloser: resp.Body, cancel: detachedCancel}
+	}
+
 	_ = req.Body.Close()
 	_ = c.Request.Body.Close()
 	return resp, nil
+}
+
+type cancelOnCloseBody struct {
+	io.ReadCloser
+	cancel context.CancelFunc
+}
+
+func (b *cancelOnCloseBody) Close() error {
+	err := b.ReadCloser.Close()
+	if b.cancel != nil {
+		b.cancel()
+	}
+	return err
 }
 
 func DoTaskApiRequest(a TaskAdaptor, c *gin.Context, info *common.RelayInfo, requestBody io.Reader) (*http.Response, error) {
