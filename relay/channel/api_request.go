@@ -514,16 +514,15 @@ func doRequest(c *gin.Context, req *http.Request, info *common.RelayInfo) (*http
 		}
 	}
 
-	// 非流请求：脱离客户端 context，使用独立 400s timeout。
-	// 原因：上游（如部分 Claude 中转）非流会憋住连接直到完整响应生成，耗时 ~90-150s，
-	// 常超过客户端默认 timeout。客户端断开会连带取消上游请求，但上游仍会向源头拿完整响应并全额计费，
-	// 本地却因 context canceled 无记录无计费，导致对账偏差。detach 后让请求走完，按真实 usage 正常扣费。
+	// 所有请求（流式+非流式）：脱离客户端 context，使用独立 400s timeout。
+	// 非流：上游憋住连接等完整响应，耗时可能超过客户端 timeout。
+	// 流式：客户端断连同样会 cancel context，导致 client.Do 报 context canceled，
+	//       但上游中转可能已向源头拿到完整响应并全额计费，本地却无记录无计费。
+	// detach 后让上游请求独立于客户端生命周期，确保拿到真实 usage 正常扣费。
 	var detachedCancel context.CancelFunc
-	if !info.IsStream {
-		var detachedCtx context.Context
-		detachedCtx, detachedCancel = context.WithTimeout(context.Background(), 400*time.Second)
-		req = req.WithContext(detachedCtx)
-	}
+	var detachedCtx context.Context
+	detachedCtx, detachedCancel = context.WithTimeout(context.Background(), 400*time.Second)
+	req = req.WithContext(detachedCtx)
 
 	resp, err := client.Do(req)
 	if err != nil {
