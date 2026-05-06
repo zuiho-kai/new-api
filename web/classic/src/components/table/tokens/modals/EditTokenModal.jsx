@@ -67,7 +67,8 @@ const EditTokenModal = (props) => {
   const formApiRef = useRef(null);
   const [models, setModels] = useState([]);
   const [groups, setGroups] = useState([]);
-  const [autoGroupKeys, setAutoGroupKeys] = useState([]);
+  // 初始包含内置 "auto"，避免 loadGroups 异步返回前编辑老 token 时跨分组重试开关闪烁消失
+  const [autoGroupKeys, setAutoGroupKeys] = useState(['auto']);
   const [showQuotaInput, setShowQuotaInput] = useState(false);
   const isEdit = props.editingToken.id !== undefined;
 

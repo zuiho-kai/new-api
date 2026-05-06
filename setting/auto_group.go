@@ -1,6 +1,7 @@
 package setting
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -190,9 +191,19 @@ func parseAutoGroupsJSON(jsonString string) ([]AutoGroupDef, error) {
 		return ensureBuiltinAutoGroup(nil), nil
 	}
 
-	// 先尝试旧格式：纯字符串数组。
-	var legacyMembers []string
-	if err := json.Unmarshal([]byte(jsonString), &legacyMembers); err == nil {
+	// 先按数组元素的原始片段判定格式：每个元素以 '"' 开头视为旧字符串数组，
+	// 以 '{' 开头视为新对象数组。空数组视为新格式。
+	var rawElems []json.RawMessage
+	if err := common.Unmarshal([]byte(jsonString), &rawElems); err != nil {
+		return nil, fmt.Errorf("解析自动分组配置失败: %w", err)
+	}
+
+	if len(rawElems) > 0 && firstNonSpaceByte(rawElems[0]) == '"' {
+		// 旧格式：纯字符串数组
+		var legacyMembers []string
+		if err := common.Unmarshal([]byte(jsonString), &legacyMembers); err != nil {
+			return nil, fmt.Errorf("解析自动分组配置失败: %w", err)
+		}
 		def := AutoGroupDef{
 			Key:         BuiltinAutoGroupKey,
 			DisplayName: "自动",
@@ -203,7 +214,7 @@ func parseAutoGroupsJSON(jsonString string) ([]AutoGroupDef, error) {
 
 	// 新格式：AutoGroupDef 数组。
 	var defs []AutoGroupDef
-	if err := json.Unmarshal([]byte(jsonString), &defs); err != nil {
+	if err := common.Unmarshal([]byte(jsonString), &defs); err != nil {
 		return nil, fmt.Errorf("解析自动分组配置失败: %w", err)
 	}
 
@@ -229,6 +240,15 @@ func parseAutoGroupsJSON(jsonString string) ([]AutoGroupDef, error) {
 	}
 
 	return ensureBuiltinAutoGroup(defs), nil
+}
+
+// firstNonSpaceByte 返回 raw 中第一个非空白字符；若全为空白返回 0。
+func firstNonSpaceByte(raw json.RawMessage) byte {
+	trimmed := bytes.TrimLeft(raw, " \t\r\n")
+	if len(trimmed) == 0 {
+		return 0
+	}
+	return trimmed[0]
 }
 
 // ensureBuiltinAutoGroup 保证返回结果包含 builtin "auto" 项，缺失时自动补一个占位。
