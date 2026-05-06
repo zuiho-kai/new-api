@@ -38,10 +38,19 @@ func GetUserGroups(c *gin.Context) {
 			}
 		}
 	}
-	if _, ok := userUsableGroups["auto"]; ok {
-		usableGroups["auto"] = map[string]interface{}{
+	// 注入所有自动分组（排除被 special "-:" 规则隐藏掉的）
+	for _, def := range setting.GetAutoGroupDefs() {
+		if _, ok := userUsableGroups[def.Key]; !ok {
+			continue
+		}
+		desc := def.DisplayName
+		if desc == "" {
+			desc = def.Key
+		}
+		usableGroups[def.Key] = map[string]interface{}{
 			"ratio": "自动",
-			"desc":  setting.GetUsableGroupDescription("auto"),
+			"desc":  desc,
+			"auto":  true,
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{

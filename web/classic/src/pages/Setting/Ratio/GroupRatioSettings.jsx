@@ -194,7 +194,7 @@ export default function GroupRatioSettings(props) {
 
       <Form.Section text={t('自动分组')}>
         <Text type='tertiary' size='small' style={{ display: 'block', marginBottom: 12 }}>
-          {t('令牌分组设为 auto 时，按以下顺序依次尝试选择可用分组，排在前面的优先级更高')}
+          {t('可配置多个自动分组，每个有独立的 key 和候选成员名单。令牌分组设为对应 key 时按候选名单顺序选择可用分组，排在前面的优先级更高。内置 auto 不可删除，可改显示名/候选名单。')}
         </Text>
         <Row gutter={16}>
           <Col xs={24} sm={12} md={8} lg={8} xl={8}>
@@ -371,7 +371,7 @@ export default function GroupRatioSettings(props) {
         <Row gutter={16}>
           <Col xs={24} sm={16}>
             <Form.TextArea
-              label={t('自动分组auto，从第一个开始选择')}
+              label={t('自动分组（兼容旧字符串数组与新对象数组两种格式）')}
               placeholder={t('为一个 JSON 文本')}
               field={'AutoGroups'}
               autosize={{ minRows: 6, maxRows: 12 }}
@@ -384,13 +384,24 @@ export default function GroupRatioSettings(props) {
                     try {
                       const parsed = JSON.parse(value);
                       if (!Array.isArray(parsed)) return false;
-                      return parsed.every((item) => typeof item === 'string');
+                      // 旧格式：纯字符串数组
+                      if (parsed.every((item) => typeof item === 'string')) {
+                        return true;
+                      }
+                      // 新格式：对象数组，每项至少含 key
+                      return parsed.every(
+                        (item) =>
+                          item &&
+                          typeof item === 'object' &&
+                          typeof item.key === 'string' &&
+                          item.key.length > 0,
+                      );
                     } catch {
                       return false;
                     }
                   },
                   message: t(
-                    '必须是有效的 JSON 字符串数组，例如：["g1","g2"]',
+                    '必须是字符串数组或对象数组，例如：[{"key":"auto","display_name":"自动","members":["default"]}]',
                   ),
                 },
               ]}
@@ -596,28 +607,37 @@ export default function GroupRatioSettings(props) {
 
         <Tabs.TabPane tab={t('自动分组')} itemKey='auto'>
           <div style={{ paddingTop: 20 }}>
-            <Title heading={5}>{t('自动分组选择')}</Title>
+            <Title heading={5}>{t('多自动分组')}</Title>
             <Paragraph style={{ marginTop: 12, lineHeight: 1.8 }}>
-              {t('当令牌分组设为 auto 时，系统按列表顺序依次选择可用分组。排在前面的优先级更高。')}
+              {t('可配置多个自动分组，每个有独立的 key 和候选成员名单。当令牌分组设为某个自动分组的 key 时，系统按其候选名单顺序选择可用分组，排在前面的优先级更高。')}
+            </Paragraph>
+            <Paragraph style={{ marginTop: 8, lineHeight: 1.8 }}>
+              {t('内置 auto 自动分组不可删除（与历史 token 兼容），但显示名和候选名单可以修改。')}
             </Paragraph>
 
             <GuideSection title={t('查看示例')}>
               <Paragraph size='small' type='tertiary' style={{ marginBottom: 6 }}>
-                {t('场景：设置自动选择优先级')}
+                {t('场景：站点同时提供"默认自动"和"VIP 自动"两套调度策略')}
               </Paragraph>
               <CodeBlock>
-                {`1. default    ${t('最高优先级')}\n2. vip`}
+                {`auto         (${t('默认自动')})\n  ├─ default\n  └─ vip\n\nvip_auto     (${t('VIP 自动')})\n  ├─ vip\n  └─ premium`}
               </CodeBlock>
               <Paragraph size='small' style={{ marginTop: 6, lineHeight: 1.6 }}>
-                {t('开启「默认使用 auto 分组」后，新建令牌和初始令牌都会自动设为 auto。')}
+                {t('用户创建令牌时，分组下拉中会同时出现 "auto"（显示名"默认自动"）和 "vip_auto"（显示名"VIP 自动"）。')}
+              </Paragraph>
+              <Paragraph size='small' style={{ marginTop: 6, lineHeight: 1.6 }}>
+                {t('开启「默认使用 auto 分组」后，新建令牌和初始令牌都会自动设为内置 auto。')}
               </Paragraph>
             </GuideSection>
 
             <GuideSection title={t('JSON 格式参考')}>
               <Paragraph size='small' style={{ marginBottom: 4 }}>
-                <Text strong code>AutoGroups</Text>{' — '}{t('有序字符串数组')}
+                <Text strong code>AutoGroups</Text>{' — '}{t('对象数组，每项含 key（英文标识符）/ display_name（中文显示名）/ members（候选成员，按优先级）')}
               </Paragraph>
-              <CodeBlock>{`["default", "vip"]`}</CodeBlock>
+              <CodeBlock>{`[\n  {"key":"auto","display_name":"默认自动","members":["default","vip"]},\n  {"key":"vip_auto","display_name":"VIP 自动","members":["vip","premium"]}\n]`}</CodeBlock>
+              <Paragraph size='small' type='tertiary' style={{ marginTop: 6, lineHeight: 1.6 }}>
+                {t('兼容历史的纯字符串数组格式 ["default","vip"]，会自动包装为内置 auto 分组的成员名单。')}
+              </Paragraph>
             </GuideSection>
           </div>
         </Tabs.TabPane>

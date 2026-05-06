@@ -67,6 +67,7 @@ const EditTokenModal = (props) => {
   const formApiRef = useRef(null);
   const [models, setModels] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [autoGroupKeys, setAutoGroupKeys] = useState([]);
   const [showQuotaInput, setShowQuotaInput] = useState(false);
   const isEdit = props.editingToken.id !== undefined;
 
@@ -141,11 +142,23 @@ const EditTokenModal = (props) => {
         label: info.desc,
         value: group,
         ratio: info.ratio,
+        auto: !!info.auto,
       }));
+      const localAutoKeys = localGroupOptions
+        .filter((g) => g.auto)
+        .map((g) => g.value);
+      setAutoGroupKeys(localAutoKeys);
       if (statusState?.status?.default_use_auto_group) {
-        if (localGroupOptions.some((group) => group.value === 'auto')) {
-          localGroupOptions.sort((a, b) => (a.value === 'auto' ? -1 : 1));
-        }
+        // 把所有自动分组排到最前，内置 auto 第一
+        localGroupOptions.sort((a, b) => {
+          if (a.auto && !b.auto) return -1;
+          if (!a.auto && b.auto) return 1;
+          if (a.auto && b.auto) {
+            if (a.value === 'auto') return -1;
+            if (b.value === 'auto') return 1;
+          }
+          return 0;
+        });
       }
       setGroups(localGroupOptions);
       if (statusState?.status?.default_use_auto_group && !isEdit && formApiRef.current) {
@@ -416,7 +429,7 @@ const EditTokenModal = (props) => {
                   <Col
                     span={24}
                     style={{
-                      display: values.group === 'auto' ? 'block' : 'none',
+                      display: autoGroupKeys.includes(values.group) ? 'block' : 'none',
                     }}
                   >
                     <Form.Switch

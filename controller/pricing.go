@@ -4,10 +4,28 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 
 	"github.com/gin-gonic/gin"
 )
+
+// collectAutoGroupMembers 汇总所有自动分组在该用户视角下可用的成员去重并集，用于价格页前端识别"自动链"。
+// 多自动分组下沿用历史 auto_groups 字段语义（数组形式）。
+func collectAutoGroupMembers(userGroup string) []string {
+	seen := make(map[string]struct{})
+	result := make([]string, 0)
+	for _, def := range setting.GetAutoGroupDefs() {
+		for _, m := range service.GetUserAutoGroup(userGroup, def.Key) {
+			if _, ok := seen[m]; ok {
+				continue
+			}
+			seen[m] = struct{}{}
+			result = append(result, m)
+		}
+	}
+	return result
+}
 
 func filterPricingByUsableGroups(pricing []model.Pricing, usableGroup map[string]string) []model.Pricing {
 	if len(pricing) == 0 {
@@ -71,7 +89,7 @@ func GetPricing(c *gin.Context) {
 		"group_ratio":        groupRatio,
 		"usable_group":       usableGroup,
 		"supported_endpoint": model.GetSupportedEndpointMap(),
-		"auto_groups":        service.GetUserAutoGroup(group),
+		"auto_groups":        collectAutoGroupMembers(group),
 		"pricing_version":    "a42d372ccf0b5dd13ecf71203521f9d2",
 	})
 }
