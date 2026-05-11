@@ -41,7 +41,7 @@ export default function SettingsMonitoring(props) {
     AutomaticDisableKeywords: '',
     AutomaticDisableStatusCodes: '401',
     AutomaticRetryStatusCodes:
-      '100-199,300-399,401-407,409-499,500-503,505-523,525-599',
+      '100-199,300-399,401-407,409-499,500-599',
     'monitor_setting.auto_test_channel_enabled': false,
     'monitor_setting.auto_test_channel_minutes': 10,
   });

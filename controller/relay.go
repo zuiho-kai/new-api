@@ -667,8 +667,8 @@ func shouldRetryTaskRelay(c *gin.Context, channelId int, taskErr *dto.TaskError,
 		return true
 	}
 	if taskErr.StatusCode/100 == 5 {
-		// 超时不重试
-		if operation_setting.IsAlwaysSkipRetryStatusCode(taskErr.StatusCode) {
+		// 任务提交超时不重试：上游可能已经收到提交，重试会重复创建任务
+		if taskErr.StatusCode == 504 || taskErr.StatusCode == 524 {
 			return false
 		}
 		return true
