@@ -211,6 +211,13 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 		return newApiErr
 	}
 
+	// 检测"假成功的空流"：上游 200 + SSE EOF 但没有任何 data 事件且 usage 为零。
+	// 命中后返回 500 + ErrorCodeEmptyResponse，让 shouldRetry 切换渠道（不带 SkipRetry）。
+	if usageDto, ok := usage.(*dto.Usage); ok && info.IsEmptyStreamResponse(usageDto) {
+		logger.LogError(c, fmt.Sprintf("upstream returned empty stream (channel #%d, model %s)", info.ChannelId, info.OriginModelName))
+		return types.NewOpenAIError(fmt.Errorf("upstream returned empty stream (no data events and no usage)"), types.ErrorCodeEmptyResponse, http.StatusInternalServerError)
+	}
+
 	var containAudioTokens = usage.(*dto.Usage).CompletionTokenDetails.AudioTokens > 0 || usage.(*dto.Usage).PromptTokensDetails.AudioTokens > 0
 	var containsAudioRatios = ratio_setting.ContainsAudioRatio(info.OriginModelName) || ratio_setting.ContainsAudioCompletionRatio(info.OriginModelName)
 

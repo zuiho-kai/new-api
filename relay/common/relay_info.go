@@ -667,6 +667,28 @@ func (info *RelayInfo) HasSendResponse() bool {
 	return info.FirstResponseTime.After(info.StartTime)
 }
 
+// IsEmptyStreamResponse 判定一次流式响应是否为"假成功的空流"：
+// 上游虽然返回了 200 + 正常 SSE EOF，但既没有任何 data 事件
+// 也没有 usage 信息。通常出现在上游代理设了硬超时（例如 30 秒）、
+// 真实后端在 reasoning 阶段还没出 token 时被强行截断，
+// 上游主动发 [DONE] 关流伪装成功。这种情况应当视为失败并切换渠道。
+func (info *RelayInfo) IsEmptyStreamResponse(usage *dto.Usage) bool {
+	if info == nil || !info.IsStream {
+		return false
+	}
+	if info.ReceivedResponseCount > 0 {
+		return false
+	}
+	if usage == nil {
+		return true
+	}
+	if usage.TotalTokens > 0 || usage.PromptTokens > 0 || usage.CompletionTokens > 0 ||
+		usage.InputTokens > 0 || usage.OutputTokens > 0 {
+		return false
+	}
+	return true
+}
+
 type TaskRelayInfo struct {
 	Action       string
 	OriginTaskID string

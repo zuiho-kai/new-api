@@ -140,6 +140,12 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 	}
 
 	usageDto := usage.(*dto.Usage)
+
+	// 检测"假成功的空流"：上游 200 + SSE EOF 但没有任何 data 事件且 usage 为零。
+	// 命中后返回 500 + ErrorCodeEmptyResponse，让 shouldRetry 切换渠道（不带 SkipRetry）。
+	if info.IsEmptyStreamResponse(usageDto) {
+		return types.NewOpenAIError(fmt.Errorf("upstream returned empty stream (no data events and no usage)"), types.ErrorCodeEmptyResponse, http.StatusInternalServerError)
+	}
 	if info.RelayMode == relayconstant.RelayModeResponsesCompact {
 		originModelName := info.OriginModelName
 		originPriceData := info.PriceData
