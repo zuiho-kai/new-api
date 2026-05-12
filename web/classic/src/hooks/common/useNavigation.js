@@ -60,6 +60,12 @@ export const useNavigation = (t, docsLink, headerNavModules) => {
           ]
         : []),
       {
+        text: t('在线agent'),
+        itemKey: 'agent',
+        isExternal: true,
+        externalLink: 'https://code.viwo50when4.xyz/api_web_agent/',
+      },
+      {
         text: t('关于'),
         itemKey: 'about',
         to: '/about',
@@ -76,6 +82,10 @@ export const useNavigation = (t, docsLink, headerNavModules) => {
         return typeof modules.pricing === 'object'
           ? modules.pricing.enabled
           : modules.pricing;
+      }
+      if (link.itemKey === 'agent') {
+        // 在线agent 不受顶栏模块配置控制，始终显示
+        return true;
       }
       return modules[link.itemKey] === true;
     });
