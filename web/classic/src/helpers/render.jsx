@@ -2337,6 +2337,102 @@ export function renderTieredModelPrice(opts) {
         ),
   ];
 
+  // === 明细行：token × 单价 + ... = 总金额（参考样式，与传统模式一致） ===
+  const hasSplitCacheCreation = cacheCreationTokens5m > 0 || cacheCreationTokens1h > 0;
+  const legacyCacheCreationTokens = hasSplitCacheCreation ? 0 : cacheCreationTokens;
+  const cacheSubTotal = cacheTokens + legacyCacheCreationTokens + cacheCreationTokens5m + cacheCreationTokens1h;
+  // GPT 格式 prompt_tokens 含所有子类别，Claude 格式 input_tokens 仅含文本
+  // 若 prompt_tokens 明显大于子类别之和则按 GPT 格式扣减以避免重复计费展示
+  const inputTokensForDisplay = (cacheSubTotal > 0 && inputTokens >= cacheSubTotal)
+      ? inputTokens - cacheSubTotal
+      : inputTokens;
+
+  const inputUnitPrice = tier.inputPrice * rate;
+  const outputUnitPrice = tier.outputPrice * rate;
+  const cacheReadUnitPrice = tier.cacheReadPrice * rate;
+  const cacheCreateUnitPrice = tier.cacheCreatePrice * rate;
+  const cacheCreate1hUnitPrice = tier.cacheCreate1hPrice * rate;
+
+  const subtotalUSD =
+      (inputTokensForDisplay / 1000000) * tier.inputPrice +
+      (cacheTokens / 1000000) * tier.cacheReadPrice +
+      (legacyCacheCreationTokens / 1000000) * tier.cacheCreatePrice +
+      (cacheCreationTokens5m / 1000000) * tier.cacheCreatePrice +
+      (cacheCreationTokens1h / 1000000) * tier.cacheCreate1hPrice +
+      (completionTokens / 1000000) * tier.outputPrice;
+  const totalUSD = subtotalUSD * gr;
+
+  const breakdownSegments = [];
+  if (tier.inputPrice > 0 && inputTokensForDisplay > 0) {
+    breakdownSegments.push(
+        i18next.t('提示 {{input}} tokens / 1M tokens * {{symbol}}{{price}}', {
+          input: inputTokensForDisplay,
+          symbol,
+          price: inputUnitPrice.toFixed(6),
+        }),
+    );
+  }
+  if (tier.cacheReadPrice > 0 && cacheTokens > 0) {
+    breakdownSegments.push(
+        i18next.t('缓存 {{tokens}} tokens / 1M tokens * {{symbol}}{{price}}', {
+          tokens: cacheTokens,
+          symbol,
+          price: cacheReadUnitPrice.toFixed(6),
+        }),
+    );
+  }
+  if (tier.cacheCreatePrice > 0 && legacyCacheCreationTokens > 0) {
+    breakdownSegments.push(
+        i18next.t('缓存创建 {{tokens}} tokens / 1M tokens * {{symbol}}{{price}}', {
+          tokens: legacyCacheCreationTokens,
+          symbol,
+          price: cacheCreateUnitPrice.toFixed(6),
+        }),
+    );
+  }
+  if (tier.cacheCreatePrice > 0 && cacheCreationTokens5m > 0) {
+    breakdownSegments.push(
+        i18next.t('5m缓存创建 {{tokens}} tokens / 1M tokens * {{symbol}}{{price}}', {
+          tokens: cacheCreationTokens5m,
+          symbol,
+          price: cacheCreateUnitPrice.toFixed(6),
+        }),
+    );
+  }
+  if (tier.cacheCreate1hPrice > 0 && cacheCreationTokens1h > 0) {
+    breakdownSegments.push(
+        i18next.t('1h缓存创建 {{tokens}} tokens / 1M tokens * {{symbol}}{{price}}', {
+          tokens: cacheCreationTokens1h,
+          symbol,
+          price: cacheCreate1hUnitPrice.toFixed(6),
+        }),
+    );
+  }
+  if (tier.outputPrice > 0 && completionTokens > 0) {
+    breakdownSegments.push(
+        i18next.t('补全 {{completion}} tokens / 1M tokens * {{symbol}}{{price}}', {
+          completion: completionTokens,
+          symbol,
+          price: outputUnitPrice.toFixed(6),
+        }),
+    );
+  }
+
+  if (breakdownSegments.length > 0) {
+    lines.push(
+        buildBillingText(
+            '{{breakdown}} * {{ratioType}} {{ratio}} = {{symbol}}{{total}}',
+            {
+              breakdown: breakdownSegments.join(' + '),
+              ratioType: i18next.t('分组倍率'),
+              ratio: gr,
+              symbol,
+              total: formatBillingDisplayPrice(totalUSD, rate),
+            },
+        ),
+    );
+  }
+
   return renderBillingArticle(lines);
 }
 
