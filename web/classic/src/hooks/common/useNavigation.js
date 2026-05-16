@@ -66,6 +66,12 @@ export const useNavigation = (t, docsLink, headerNavModules) => {
         externalLink: 'https://code.viwo50when4.xyz/api_web_agent/',
       },
       {
+        text: t('视频/图片生成工作台'),
+        itemKey: 'zaoyin',
+        isExternal: true,
+        externalLink: 'https://code.viwo50when4.xyz/zaoyin/',
+      },
+      {
         text: t('关于'),
         itemKey: 'about',
         to: '/about',
@@ -83,8 +89,8 @@ export const useNavigation = (t, docsLink, headerNavModules) => {
           ? modules.pricing.enabled
           : modules.pricing;
       }
-      if (link.itemKey === 'agent') {
-        // 在线agent 不受顶栏模块配置控制，始终显示
+      if (link.itemKey === 'agent' || link.itemKey === 'zaoyin') {
+        // 在线agent / 视频图片生成工作台 不受顶栏模块配置控制，始终显示
         return true;
       }
       return modules[link.itemKey] === true;
