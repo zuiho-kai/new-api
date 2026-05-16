@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	common2 "github.com/QuantumNous/new-api/common"
@@ -543,8 +544,26 @@ func doRequest(c *gin.Context, req *http.Request, info *common.RelayInfo) (*http
 		c.Set(common2.UpstreamRequestIdKey, upID)
 	}
 
-	// 把 cancel 绑到 resp.Body 的 Close，确保响应读完或调用方主动关闭后才释放 context
-	if detachedCancel != nil {
+	// 流式请求：启用首包超时。N 秒内未收到首字节就 abort 上游连接，
+	// 让 body Read 报错后，shouldRetry 走切换渠道流程。
+	// 非流式或未配置则保持原 cancelOnCloseBody 行为。
+	firstChunkSeconds := 0
+	if info.IsStream {
+		firstChunkSeconds = operation_setting.GetGeneralSetting().StreamFirstChunkTimeoutSeconds
+	}
+	if firstChunkSeconds > 0 && detachedCancel != nil {
+		watcher := &firstByteWatcher{
+			ReadCloser: resp.Body,
+			cancel:     detachedCancel,
+		}
+		watcher.timer = time.AfterFunc(time.Duration(firstChunkSeconds)*time.Second, func() {
+			if !watcher.seen.Load() {
+				logger.LogError(c, fmt.Sprintf("first chunk timeout after %ds, aborting upstream", firstChunkSeconds))
+				detachedCancel()
+			}
+		})
+		resp.Body = watcher
+	} else if detachedCancel != nil {
 		resp.Body = &cancelOnCloseBody{ReadCloser: resp.Body, cancel: detachedCancel}
 	}
 
@@ -562,6 +581,36 @@ func (b *cancelOnCloseBody) Close() error {
 	err := b.ReadCloser.Close()
 	if b.cancel != nil {
 		b.cancel()
+	}
+	return err
+}
+
+// firstByteWatcher 监听流式响应是否在首包超时窗口内收到首个字节。
+// 超时未收到则调用 cancel() 中断上游连接,后续 Read 报错走 shouldRetry 切渠道。
+type firstByteWatcher struct {
+	io.ReadCloser
+	cancel context.CancelFunc
+	timer  *time.Timer
+	seen   atomic.Bool
+}
+
+func (w *firstByteWatcher) Read(p []byte) (int, error) {
+	n, err := w.ReadCloser.Read(p)
+	if n > 0 && w.seen.CompareAndSwap(false, true) {
+		if w.timer != nil {
+			w.timer.Stop()
+		}
+	}
+	return n, err
+}
+
+func (w *firstByteWatcher) Close() error {
+	if w.timer != nil {
+		w.timer.Stop()
+	}
+	err := w.ReadCloser.Close()
+	if w.cancel != nil {
+		w.cancel()
 	}
 	return err
 }
