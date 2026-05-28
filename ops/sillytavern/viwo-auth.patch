@@ -1,0 +1,297 @@
+diff --git a/public/login.html b/public/login.html
+index 26fcb91..1220782 100644
+--- a/public/login.html
++++ b/public/login.html
+@@ -42,25 +42,28 @@
+                     <div id="userSelectBlock" class="flex-container flexFlowColumn alignItemsCenter">
+                         <h2 id="logoBlock" class="flex-container">
+                             <img src="img/logo.png" alt="SillyTavern" class="logo">
+-                            <span>Welcome to SillyTavern</span>
++                            <span>Viwo50 酒馆</span>
+                         </h2>
+                         <h3 id="normalLoginPrompt">
+-                            Select an Account
++                            使用 viwo50 的账户登录
+                         </h3>
+                         <h3 id="discreetLoginPrompt">
+-                            Enter Login Details
++                            使用 viwo50 的账户登录
+                         </h3>
+                         <div id="userListBlock" class="wide100p">
+                             <div id="userList" class="flex-container justifySpaceEvenly"></div>
+                             <div id="handleEntryBlock" style="display:none;" class="flex-container flexFlowColumn alignItemsCenter">
+-                                <input id="userHandle" class="text_pole" type="text" placeholder="User handle" autocomplete="username">
++                                <input id="userHandle" class="text_pole" type="text" placeholder="viwo50 用户名或邮箱" autocomplete="username">
+                             </div>
+                             <div id="passwordEntryBlock" style="display:none;"
+                                 class="flex-container flexFlowColumn alignItemsCenter">
+-                                <input id="userPassword" class="text_pole" type="password" placeholder="Password" autocomplete="current-password">
+-                                <a id="recoverPassword" href="#" onclick="return false;">Forgot password?</a>
++                                <input id="userPassword" class="text_pole" type="password" placeholder="viwo50 密码" autocomplete="current-password">
++                                <div class="m-b-1 textAlignCenter">
++                                    使用 code.viwo50when4.xyz 的账户密码登录，密码请在 viwo50 账户侧管理。
++                                </div>
++                                <a id="recoverPassword" href="#" onclick="return false;" style="display:none;">忘记密码？</a>
+                                 <div class="flex-container">
+-                                    <div id="loginButton" class="menu_button">Login</div>
++                                    <div id="loginButton" class="menu_button">登录</div>
+                                 </div>
+                             </div>
+                             <div id="passwordRecoveryBlock" style="display:none;" class="flex-container flexFlowColumn alignItemsCenter">
+diff --git a/public/scripts/i18n.js b/public/scripts/i18n.js
+index 7469ab6..8a95877 100644
+--- a/public/scripts/i18n.js
++++ b/public/scripts/i18n.js
+@@ -3,7 +3,7 @@ import { updateSecretDisplay } from './secrets.js';
+ 
+ const storageKey = 'language';
+ const overrideLanguage = localStorage.getItem(storageKey);
+-const localeFile = String(overrideLanguage || navigator.language || navigator.userLanguage || 'en').toLowerCase();
++const localeFile = String(overrideLanguage || 'zh-cn').toLowerCase();
+ var langs;
+ // Don't change to let/const! It will break module loading.
+ // eslint-disable-next-line prefer-const
+diff --git a/src/endpoints/users-public.js b/src/endpoints/users-public.js
+index 1645f4c..2d2f559 100644
+--- a/src/endpoints/users-public.js
++++ b/src/endpoints/users-public.js
+@@ -5,7 +5,9 @@ import express from 'express';
+ import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
+ import { getIpAddress, retryAfter } from '../express-common.js';
+ import { color, Cache, getConfigValue } from '../util.js';
+-import { KEY_PREFIX, getUserAvatar, toKey, getPasswordHash, getPasswordSalt, getAccountVersion } from '../users.js';
++import { KEY_PREFIX, getUserAvatar, toKey, getPasswordHash, getPasswordSalt, getAccountVersion, ensurePublicDirectoriesExist, getUserDirectories } from '../users.js';
++import { checkForNewContent, CONTENT_TYPES } from './content-manager.js';
++import { NEW_API_AUTH_ENABLED, isNewApiAdmin, validateNewApiLogin } from '../external-auth/new-api.js';
+ 
+ const DISCREET_LOGIN = getConfigValue('enableDiscreetLogin', false, 'boolean');
+ const PREFER_REAL_IP_HEADER = getConfigValue('rateLimiting.preferRealIpHeader', false, 'boolean');
+@@ -15,6 +17,61 @@ const MFA_CACHE = new Cache(5 * 60 * 1000);
+ 
+ const generateRecoveryCode = () => Array.from({ length: 6 }, () => crypto.randomInt(0, 10)).join('');
+ 
++function getNewApiHandle(user) {
++    const id = String(user.id).replace(/[^a-zA-Z0-9_-]/g, '');
++    return `viwo-${id}`;
++}
++
++async function upsertNewApiUser(authUser) {
++    const handle = getNewApiHandle(authUser);
++    const key = toKey(handle);
++    const existing = await storage.getItem(key);
++
++    if (existing && existing.externalAuth !== 'new-api') {
++        throw new Error(`Local user handle conflict: ${handle}`);
++    }
++
++    const user = {
++        ...(existing || {}),
++        handle,
++        name: authUser.displayName || authUser.username,
++        created: existing?.created || Date.now(),
++        password: '',
++        salt: '',
++        enabled: existing?.enabled ?? true,
++        admin: isNewApiAdmin(authUser.role),
++        externalAuth: 'new-api',
++        externalId: String(authUser.id),
++        externalUsername: authUser.username,
++        externalGroup: authUser.group,
++        externalSyncedAt: Date.now(),
++    };
++
++    await storage.setItem(key, user);
++
++    if (!existing) {
++        console.info('Creating data directories for external user', user.handle);
++        await ensurePublicDirectoriesExist();
++        await checkForNewContent([getUserDirectories(user.handle)], [CONTENT_TYPES.SETTINGS]);
++    }
++
++    return user;
++}
++
++async function tryNewApiLogin(handle, password) {
++    if (!NEW_API_AUTH_ENABLED) {
++        return null;
++    }
++
++    const auth = await validateNewApiLogin(handle, password);
++    if (!auth.ok) {
++        return { ok: false, error: auth.error || 'Incorrect credentials' };
++    }
++
++    const user = await upsertNewApiUser(auth.user);
++    return { ok: true, user };
++}
++
+ export const router = express.Router();
+ const loginLimiter = new RateLimiterMemory({
+     points: LOGIN_POINTS > 0 ? LOGIN_POINTS : Number.MAX_SAFE_INTEGER,
+@@ -68,11 +125,25 @@ router.post('/login', async (request, response) => {
+         const ip = getIpAddress(request, PREFER_REAL_IP_HEADER);
+         await loginLimiter.consume(ip);
+ 
++        const requestedHandle = String(request.body.handle).trim();
++        const password = String(request.body.password || '');
++
+         /** @type {import('../users.js').User} */
+-        const user = await storage.getItem(toKey(request.body.handle));
++        let user = await storage.getItem(toKey(requestedHandle));
++        let externalValidated = false;
++
++        if (!user && NEW_API_AUTH_ENABLED) {
++            const externalLogin = await tryNewApiLogin(requestedHandle, password);
++            if (!externalLogin?.ok) {
++                console.warn('Login failed: external auth rejected', requestedHandle, externalLogin?.error || '');
++                return response.status(403).json({ error: 'Incorrect credentials' });
++            }
++            user = externalLogin.user;
++            externalValidated = true;
++        }
+ 
+         if (!user) {
+-            console.error('Login failed: User', request.body.handle, 'not found');
++            console.error('Login failed: User', requestedHandle, 'not found');
+             return response.status(403).json({ error: 'Incorrect credentials' });
+         }
+ 
+@@ -81,9 +152,23 @@ router.post('/login', async (request, response) => {
+             return response.status(403).json({ error: 'User is disabled' });
+         }
+ 
+-        if (user.password && user.password !== getPasswordHash(request.body.password, user.salt)) {
+-            console.warn('Login failed: Incorrect password for', user.handle);
+-            return response.status(403).json({ error: 'Incorrect credentials' });
++        if (user.externalAuth === 'new-api' && !externalValidated) {
++            const externalUsername = user.externalUsername || requestedHandle;
++            const externalLogin = await tryNewApiLogin(externalUsername, password);
++            if (!externalLogin?.ok) {
++                console.warn('Login failed: external auth rejected', user.handle, externalLogin?.error || '');
++                return response.status(403).json({ error: 'Incorrect credentials' });
++            }
++            user = externalLogin.user;
++            if (!user.enabled) {
++                console.warn('Login failed: User', user.handle, 'is disabled');
++                return response.status(403).json({ error: 'User is disabled' });
++            }
++        } else {
++            if (user.password && user.password !== getPasswordHash(password, user.salt)) {
++                console.warn('Login failed: Incorrect password for', user.handle);
++                return response.status(403).json({ error: 'Incorrect credentials' });
++            }
+         }
+ 
+         if (!request.session) {
+@@ -130,6 +215,11 @@ router.post('/recover-step1', async (request, response) => {
+             return response.status(403).json({ error: 'User is disabled' });
+         }
+ 
++        if (user.externalAuth) {
++            console.warn('Recover step 1 failed: User', user.handle, 'is externally managed');
++            return response.status(403).json({ error: 'Password is managed by the external account system' });
++        }
++
+         const mfaCode = generateRecoveryCode();
+         console.log();
+         console.log(color.blue(`${user.name}, your password recovery code is: `) + color.magenta(mfaCode));
+@@ -173,6 +263,11 @@ router.post('/recover-step2', async (request, response) => {
+             return response.status(403).json({ error: 'User is disabled' });
+         }
+ 
++        if (user.externalAuth) {
++            console.warn('Recover step 2 failed: User', user.handle, 'is externally managed');
++            return response.status(403).json({ error: 'Password is managed by the external account system' });
++        }
++
+         const mfaCode = MFA_CACHE.get(user.handle);
+ 
+         if (request.body.code !== mfaCode) {
+diff --git a/src/external-auth/new-api.js b/src/external-auth/new-api.js
+new file mode 100644
+index 0000000..753006f
+--- /dev/null
++++ b/src/external-auth/new-api.js
+@@ -0,0 +1,82 @@
++import process from 'node:process';
++
++const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on']);
++const DEFAULT_LOGIN_URL = 'http://new-api:3000/api/user/login';
++const DEFAULT_TIMEOUT_MS = 8000;
++
++export const NEW_API_AUTH_ENABLED = TRUE_VALUES.has(String(process.env.SILLYTAVERN_NEW_API_AUTH_ENABLED ?? '').toLowerCase());
++
++function getLoginUrl() {
++    return String(process.env.SILLYTAVERN_NEW_API_LOGIN_URL || DEFAULT_LOGIN_URL);
++}
++
++function getTimeoutMs() {
++    const value = Number(process.env.SILLYTAVERN_NEW_API_AUTH_TIMEOUT_MS || DEFAULT_TIMEOUT_MS);
++    return Number.isFinite(value) && value > 0 ? value : DEFAULT_TIMEOUT_MS;
++}
++
++export function isNewApiAdmin(role) {
++    return Number(role) >= 10;
++}
++
++export async function validateNewApiLogin(username, password) {
++    if (!NEW_API_AUTH_ENABLED) {
++        return { ok: false, error: 'New API auth is disabled' };
++    }
++
++    if (!username || !password) {
++        return { ok: false, error: 'Missing credentials' };
++    }
++
++    const controller = new AbortController();
++    const timeout = setTimeout(() => controller.abort(), getTimeoutMs());
++
++    try {
++        const response = await fetch(getLoginUrl(), {
++            method: 'POST',
++            headers: { 'Content-Type': 'application/json' },
++            body: JSON.stringify({ username, password }),
++            signal: controller.signal,
++        });
++
++        let payload = null;
++        try {
++            payload = await response.json();
++        } catch {
++            payload = null;
++        }
++
++        if (!response.ok || !payload?.success) {
++            if (payload?.data?.require_2fa) {
++                return { ok: false, error: '2FA accounts are not supported by the SillyTavern bridge yet' };
++            }
++            return { ok: false, error: payload?.message || 'Incorrect credentials' };
++        }
++
++        if (payload?.data?.require_2fa) {
++            return { ok: false, error: '2FA accounts are not supported by the SillyTavern bridge yet' };
++        }
++
++        const data = payload.data || {};
++        if (!data.id || !data.username) {
++            return { ok: false, error: 'Invalid New API login response' };
++        }
++
++        return {
++            ok: true,
++            user: {
++                id: data.id,
++                username: String(data.username),
++                displayName: String(data.display_name || data.username),
++                role: Number(data.role || 1),
++                status: Number(data.status || 1),
++                group: String(data.group || 'default'),
++            },
++        };
++    } catch (error) {
++        const message = error?.name === 'AbortError' ? 'New API login timed out' : String(error?.message || error);
++        return { ok: false, error: message };
++    } finally {
++        clearTimeout(timeout);
++    }
++}
