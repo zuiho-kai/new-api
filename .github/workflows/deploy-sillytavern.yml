@@ -1,0 +1,102 @@
+name: Deploy SillyTavern
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ops/sillytavern/**
+      - .github/workflows/deploy-sillytavern.yml
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Upload SillyTavern patch
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: root
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: ops/sillytavern/viwo-auth.patch
+          target: /tmp/sillytavern-deploy
+          strip_components: 2
+          overwrite: true
+
+      - name: Apply patch and restart SillyTavern
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: root
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -euo pipefail
+
+            PATCH=/tmp/sillytavern-deploy/viwo-auth.patch
+            SRC=/opt/sillytavern/src
+            STACK=/opt/sillytavern
+
+            test -f "$PATCH"
+            test -d "$SRC"
+            cd "$SRC"
+
+            if git apply --check "$PATCH"; then
+              git apply "$PATCH"
+            elif grep -q 'Viwo50 酒馆' public/login.html && test -f src/external-auth/new-api.js; then
+              echo "SillyTavern patch already applied."
+            else
+              echo "SillyTavern patch cannot be applied and target files do not look updated."
+              exit 1
+            fi
+
+            node --check src/external-auth/new-api.js
+            node --check src/endpoints/users-public.js
+            node --check public/scripts/i18n.js
+
+            cd "$STACK"
+            python3 - <<'PY'
+            from pathlib import Path
+
+            path = Path("docker-compose.yml")
+            text = path.read_text(encoding="utf-8")
+            required = [
+                "      - SILLYTAVERN_NEW_API_AUTH_ENABLED=true",
+                "      - SILLYTAVERN_NEW_API_LOGIN_URL=http://new-api:3000/api/user/login",
+            ]
+            lines = text.splitlines()
+            if all(item in lines for item in required):
+                raise SystemExit(0)
+
+            insert_at = None
+            for index, line in enumerate(lines):
+                if "SILLYTAVERN_LOCKED_BASE_URL=" in line:
+                    insert_at = index + 1
+                    break
+            if insert_at is None:
+                raise SystemExit("未找到 SILLYTAVERN_LOCKED_BASE_URL 环境变量")
+
+            for item in reversed(required):
+                if item not in lines:
+                    lines.insert(insert_at, item)
+            path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            PY
+
+            docker compose build sillytavern
+            docker compose up -d sillytavern
+
+            docker exec sillytavern node --check /home/node/app/src/external-auth/new-api.js
+            docker exec sillytavern node --check /home/node/app/src/endpoints/users-public.js
+            docker exec sillytavern node --check /home/node/app/public/scripts/i18n.js
+
+            docker exec sillytavern node --input-type=module - <<'NODE'
+            const response = await fetch('http://127.0.0.1:8000/login');
+            const html = await response.text();
+            if (!html.includes('Viwo50 酒馆') || !html.includes('使用 viwo50 的账户登录')) {
+              console.error('登录页中文文案未生效');
+              process.exit(1);
+            }
+            NODE
+
+            echo "SillyTavern deployed."
