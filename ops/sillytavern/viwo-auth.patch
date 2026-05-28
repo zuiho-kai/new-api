@@ -246,7 +246,7 @@ index dc01d57..f6bdac1 100644
  /**
 
 diff --git a/src/middleware/baseUrlLockdown.js b/src/middleware/baseUrlLockdown.js
-index 1dc452e..635cd0b 100644
+index 65c5df6..635cd0b 100644
 --- a/src/middleware/baseUrlLockdown.js
 +++ b/src/middleware/baseUrlLockdown.js
 @@ -1,4 +1,7 @@
@@ -295,10 +295,3 @@ index 1dc452e..635cd0b 100644
          });
      }
  
-@@ -79,4 +90,4 @@ export default function baseUrlLockdownMiddleware(request, response, next) {
-     }
- 
-     return next();
--}
-\ No newline at end of file
-+}
