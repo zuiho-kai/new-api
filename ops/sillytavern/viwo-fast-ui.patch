@@ -1,36 +1,3 @@
-diff --git a/public/css/user.css b/public/css/user.css
-new file mode 100644
-index 0000000..bd765ed
---- /dev/null
-+++ b/public/css/user.css
-@@ -0,0 +1,27 @@
-+.viwo-top-logout {
-+    position: fixed;
-+    top: 10px;
-+    right: 12px;
-+    z-index: 3005;
-+    display: none;
-+    align-items: center;
-+    gap: 6px;
-+    min-width: 94px;
-+    min-height: 34px;
-+    padding: 6px 10px;
-+    white-space: nowrap;
-+    writing-mode: horizontal-tb;
-+}
-+
-+@media screen and (max-width: 600px) {
-+    .viwo-top-logout {
-+        top: 8px;
-+        right: 8px;
-+        min-width: 36px;
-+        padding: 6px 8px;
-+    }
-+
-+    .viwo-top-logout span {
-+        display: none;
-+    }
-+}
 diff --git a/public/index.html b/public/index.html
 index af2d4ef..f3bb413 100644
 --- a/public/index.html
@@ -124,3 +91,38 @@ index 2ceaf43..9f9d85f 100644
          logout();
      });
      $('#admin_button').on('click', () => {
+diff --git a/public/style.css b/public/style.css
+index 054a6b8..2f7211d 100644
+--- a/public/style.css
++++ b/public/style.css
+@@ -6454,3 +6454,30 @@ body:not(.movingUI) .drawer-content.maximized {
+         border-width: 2px;
+     }
+ }
++.viwo-top-logout {
++    position: fixed;
++    top: 10px;
++    right: 12px;
++    z-index: 3005;
++    display: none;
++    align-items: center;
++    gap: 6px;
++    min-width: 94px;
++    min-height: 34px;
++    padding: 6px 10px;
++    white-space: nowrap;
++    writing-mode: horizontal-tb;
++}
++
++@media screen and (max-width: 600px) {
++    .viwo-top-logout {
++        top: 8px;
++        right: 8px;
++        min-width: 36px;
++        padding: 6px 8px;
++    }
++
++    .viwo-top-logout span {
++        display: none;
++    }
++}
