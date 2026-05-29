@@ -9,3 +9,18 @@ diff --git a/public/scripts/openai.js b/public/scripts/openai.js
  }
  
  function setNamesBehaviorControls() {
+    switch (oai_settings.names_behavior) {
+diff --git a/src/server-main.js b/src/server-main.js
+--- a/src/server-main.js
++++ b/src/server-main.js
+@@ -140,7 +140,9 @@ if (corsEnabled) {
+     app.use(cors(corsOptions));
+ }
+ 
+-if (cliArgs.listen && cliArgs.basicAuthMode) {
++const useNewApiLogin = process.env.SILLYTAVERN_NEW_API_AUTH_ENABLED === 'true';
++
++if (cliArgs.listen && cliArgs.basicAuthMode && !useNewApiLogin) {
+     app.use(basicAuthMiddleware);
+ }
+ 
