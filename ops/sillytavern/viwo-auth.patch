@@ -1,15 +1,3 @@
-diff --git a/public/scripts/openai.js b/public/scripts/openai.js
---- a/public/scripts/openai.js
-+++ b/public/scripts/openai.js
-@@ -4301,6 +4301,7 @@ function loadOpenAISettings(data, settings) {
-     $('#openrouter_quantizations_chat').trigger('change');
-     $('#nanogpt_provider').trigger('change');
-     $('#chat_completion_source').trigger('change');
-+    applyBaseUrlLockdown();
- }
- 
- function setNamesBehaviorControls() {
-    switch (oai_settings.names_behavior) {
 diff --git a/src/server-main.js b/src/server-main.js
 --- a/src/server-main.js
 +++ b/src/server-main.js
