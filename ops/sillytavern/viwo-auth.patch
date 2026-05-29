@@ -265,18 +265,18 @@ index 26fcb91..8e7b8bd 100644
                              </div>
                              <div id="passwordRecoveryBlock" style="display:none;" class="flex-container flexFlowColumn alignItemsCenter">
 diff --git a/public/script.js b/public/script.js
-index 68a5461..782ae22 100644
+index 68a5461..4d9da79 100644
 --- a/public/script.js
 +++ b/public/script.js
-@@ -774,6 +774,8 @@ async function firstLoadInit() {
-     initBulkEdit();
-     initReasoning();
-     initWelcomeScreen();
+@@ -749,6 +749,8 @@ async function firstLoadInit() {
+     await initSystemMessages();
+     await getSettings(initLoaderHandle);
+     await checkOpenRouterAuth();
 +    await initLoaderHandle.hide();
 +    await fixViewport();
-     await initScrapers();
-     initCustomSelectedSamplers();
-     initDataMaid();
+     initKeyboard();
+     initDynamicStyles();
+     initTags();
 @@ -783,8 +785,6 @@ async function firstLoadInit() {
      addDebugFunctions();
      doDailyExtensionUpdatesCheck();
@@ -488,13 +488,12 @@ index 97b9665..29681d6 100644
 +
 +    const changed = oai_settings.chat_completion_source !== chat_completion_sources.CUSTOM
 +        || oai_settings.custom_url !== lockedChatCompletionsUrl
-+        || oai_settings.custom_model !== lockedChatCompletionsModel
 +        || oai_settings.reverse_proxy !== ''
 +        || oai_settings.show_external_models !== false;
 +
 +    oai_settings.chat_completion_source = chat_completion_sources.CUSTOM;
 +    oai_settings.custom_url = lockedChatCompletionsUrl;
-+    oai_settings.custom_model = lockedChatCompletionsModel;
++    oai_settings.custom_model = oai_settings.custom_model || lockedChatCompletionsModel;
 +    oai_settings.reverse_proxy = '';
 +    oai_settings.show_external_models = false;
 +
@@ -519,14 +518,9 @@ index 97b9665..29681d6 100644
 +        });
 +
 +    $('#custom_model_id')
-+        .val(lockedChatCompletionsModel)
-+        .prop('readonly', true)
-+        .attr('title', `Chat completion model locked to ${lockedChatCompletionsModel}`)
-+        .off('input.baseUrlLockdown')
-+        .on('input.baseUrlLockdown', function () {
-+            oai_settings.custom_model = lockedChatCompletionsModel;
-+            $(this).val(lockedChatCompletionsModel);
-+        });
++        .val(oai_settings.custom_model || lockedChatCompletionsModel)
++        .prop('readonly', false)
++        .attr('title', '输入模型名，或从下方可用模型中选择');
 +
 +    $('#openai_reverse_proxy')
 +        .val('')

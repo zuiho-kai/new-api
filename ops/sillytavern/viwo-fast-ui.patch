@@ -32,18 +32,18 @@ index af2d4ef..cd2896d 100644
      <div id="top-settings-holder">
          <!-- background selection menu -->
 diff --git a/public/script.js b/public/script.js
-index 68a5461..782ae22 100644
+index 68a5461..4d9da79 100644
 --- a/public/script.js
 +++ b/public/script.js
-@@ -774,6 +774,8 @@ async function firstLoadInit() {
-     initBulkEdit();
-     initReasoning();
-     initWelcomeScreen();
+@@ -749,6 +749,8 @@ async function firstLoadInit() {
+     await initSystemMessages();
+     await getSettings(initLoaderHandle);
+     await checkOpenRouterAuth();
 +    await initLoaderHandle.hide();
 +    await fixViewport();
-     await initScrapers();
-     initCustomSelectedSamplers();
-     initDataMaid();
+     initKeyboard();
+     initDynamicStyles();
+     initTags();
 @@ -783,8 +785,6 @@ async function firstLoadInit() {
      addDebugFunctions();
      doDailyExtensionUpdatesCheck();
@@ -52,6 +52,22 @@ index 68a5461..782ae22 100644
 -    await fixViewport();
      await eventSource.emit(event_types.APP_READY);
  }
+ 
+@@ -7938,8 +7938,15 @@ export async function getSettings(initLoaderHandle = null) {
+             settings.main_api = 'openai';
+         }
+ 
++        settings.main_api = 'openai';
+         main_api = settings.main_api;
+         $('#main_api').val(main_api);
++        $('#main_api option').each(function () {
++            $(this).prop('disabled', this.value !== 'openai');
++        });
++        $('#main_api')
++            .prop('disabled', true)
++            .attr('title', 'API is locked to Chat Completion on this deployment.');
+         $(`#main_api option[value=${main_api}]`).attr('selected', 'true');
+         changeMainAPI();
  
 diff --git a/public/scripts/user.js b/public/scripts/user.js
 index 2ceaf43..9f9d85f 100644
