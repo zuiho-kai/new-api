@@ -1,0 +1,126 @@
+diff --git a/public/css/user.css b/public/css/user.css
+new file mode 100644
+index 0000000..bd765ed
+--- /dev/null
++++ b/public/css/user.css
+@@ -0,0 +1,27 @@
++.viwo-top-logout {
++    position: fixed;
++    top: 10px;
++    right: 12px;
++    z-index: 3005;
++    display: none;
++    align-items: center;
++    gap: 6px;
++    min-width: 94px;
++    min-height: 34px;
++    padding: 6px 10px;
++    white-space: nowrap;
++    writing-mode: horizontal-tb;
++}
++
++@media screen and (max-width: 600px) {
++    .viwo-top-logout {
++        top: 8px;
++        right: 8px;
++        min-width: 36px;
++        padding: 6px 8px;
++    }
++
++    .viwo-top-logout span {
++        display: none;
++    }
++}
+diff --git a/public/index.html b/public/index.html
+index af2d4ef..f3bb413 100644
+--- a/public/index.html
++++ b/public/index.html
+@@ -62,6 +62,10 @@
+     </div>
+     <!-- top bar central settings buttons -->
+     <div id="top-bar">
++        <div id="viwo_top_logout" class="menu_button menu_button_icon viwo-top-logout" title="退出登录" data-i18n="[title]Logout">
++            <i class="fa-fw fa-solid fa-right-from-bracket"></i>
++            <span>退出登录</span>
++        </div>
+     </div>
+     <div id="top-settings-holder">
+         <!-- background selection menu -->
+diff --git a/public/script.js b/public/script.js
+index 68a5461..782ae22 100644
+--- a/public/script.js
++++ b/public/script.js
+@@ -774,6 +774,8 @@ async function firstLoadInit() {
+     initBulkEdit();
+     initReasoning();
+     initWelcomeScreen();
++    await initLoaderHandle.hide();
++    await fixViewport();
+     await initScrapers();
+     initCustomSelectedSamplers();
+     initDataMaid();
+@@ -783,8 +785,6 @@ async function firstLoadInit() {
+     addDebugFunctions();
+     doDailyExtensionUpdatesCheck();
+     await eventSource.emit(event_types.APP_INITIALIZED);
+-    await initLoaderHandle.hide();
+-    await fixViewport();
+     await eventSource.emit(event_types.APP_READY);
+ }
+ 
+diff --git a/public/scripts/user.js b/public/scripts/user.js
+index 2ceaf43..9f9d85f 100644
+--- a/public/scripts/user.js
++++ b/public/scripts/user.js
+@@ -12,6 +12,7 @@ export let accountsEnabled = false;
+ 
+ // Extend the session every 10 minutes
+ const SESSION_EXTEND_INTERVAL = 10 * 60 * 1000;
++const SAVED_LOGIN_KEY = 'viwo50.sillytavern.login';
+ 
+ /**
+  * Enable or disable user account controls in the UI.
+@@ -23,11 +24,13 @@ export async function setUserControls(isEnabled) {
+ 
+     if (!isEnabled) {
+         $('#logout_button').hide();
++        $('#viwo_top_logout').hide();
+         $('#admin_button').hide();
+         return;
+     }
+ 
+     $('#logout_button').show();
++    $('#viwo_top_logout').show();
+     await getCurrentUser();
+ }
+ 
+@@ -859,6 +862,8 @@ async function openAdminPanel() {
+  * @returns {Promise<void>}
+  */
+ async function logout() {
++    localStorage.removeItem(SAVED_LOGIN_KEY);
++
+     await fetch('/api/users/logout', {
+         method: 'POST',
+         headers: getRequestHeaders({ omitContentType: true }),
+@@ -868,10 +873,7 @@ async function logout() {
+     // to allow user to change username even
+     // when auto auth (such as authelia or basic)
+     // would be valid
+-    const urlParams = new URLSearchParams(window.location.search);
+-    urlParams.set('noauto', 'true');
+-
+-    window.location.search = urlParams.toString();
++    window.location.href = '/login?noauto=1';
+ }
+ 
+ /**
+@@ -917,7 +919,7 @@ async function extendUserSession() {
+ }
+ 
+ jQuery(() => {
+-    $('#logout_button').on('click', () => {
++    $('#logout_button, #viwo_top_logout').on('click', () => {
+         logout();
+     });
+     $('#admin_button').on('click', () => {

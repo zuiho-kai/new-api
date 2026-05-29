@@ -1,5 +1,5 @@
 diff --git a/default/config.yaml b/default/config.yaml
-index e61f783f..1e68095a 100644
+index e61f783..1e68095 100644
 --- a/default/config.yaml
 +++ b/default/config.yaml
 @@ -296,7 +296,7 @@ extensions:
@@ -17,8 +17,58 @@ index e61f783f..1e68095a 100644
  # Attempt to automatically update server plugins on startup
 -enableServerPluginsAutoUpdate: true
 +enableServerPluginsAutoUpdate: false
+diff --git a/default/content/presets/openai/Default.json b/default/content/presets/openai/Default.json
+index db422d1..e944ac1 100644
+--- a/default/content/presets/openai/Default.json
++++ b/default/content/presets/openai/Default.json
+@@ -1,5 +1,5 @@
+ {
+-    "chat_completion_source": "openai",
++    "chat_completion_source": "custom",
+     "openai_model": "gpt-4-turbo",
+     "claude_model": "claude-sonnet-4-5",
+     "openrouter_model": "OR_Website",
+@@ -15,8 +15,8 @@
+     "electronhub_model": "gpt-4o-mini",
+     "electronhub_sort_models": "alphabetically",
+     "electronhub_group_models": false,
+-    "custom_model": "",
+-    "custom_url": "",
++    "custom_model": "mimo-v2.5-pro",
++    "custom_url": "https://code.viwo50when4.xyz/v1/chat/completions",
+     "custom_include_body": "",
+     "custom_exclude_body": "",
+     "custom_include_headers": "",
+diff --git a/default/content/settings.json b/default/content/settings.json
+index 530fbc2..696c53a 100644
+--- a/default/content/settings.json
++++ b/default/content/settings.json
+@@ -6,7 +6,7 @@
+     "user_avatar": "user-default.png",
+     "amount_gen": 350,
+     "max_context": 8192,
+-    "main_api": "koboldhorde",
++    "main_api": "openai",
+     "world_info_settings": {
+         "world_info": {
+             "globalSelect": []
+@@ -622,11 +622,13 @@
+         },
+         "wi_format": "{0}",
+         "openai_model": "gpt-4-turbo",
++        "custom_model": "mimo-v2.5-pro",
++        "custom_url": "https://code.viwo50when4.xyz/v1/chat/completions",
+         "claude_model": "claude-sonnet-4-5",
+         "ai21_model": "jamba-large",
+         "openrouter_model": "OR_Website",
+         "reverse_proxy": "",
+-        "chat_completion_source": "openai",
++        "chat_completion_source": "custom",
+         "max_context_unlocked": false,
+         "api_url_scale": "",
+         "show_external_models": false,
 diff --git a/public/css/login.css b/public/css/login.css
-index 7c23c59b..364797c1 100644
+index 7c23c59..364797c 100644
 --- a/public/css/login.css
 +++ b/public/css/login.css
 @@ -7,10 +7,50 @@ body.login .logo {
@@ -128,23 +178,90 @@ index 7c23c59b..364797c1 100644
 +        width: 100%;
 +    }
 +}
+diff --git a/public/css/user.css b/public/css/user.css
+new file mode 100644
+index 0000000..bd765ed
+--- /dev/null
++++ b/public/css/user.css
+@@ -0,0 +1,27 @@
++.viwo-top-logout {
++    position: fixed;
++    top: 10px;
++    right: 12px;
++    z-index: 3005;
++    display: none;
++    align-items: center;
++    gap: 6px;
++    min-width: 94px;
++    min-height: 34px;
++    padding: 6px 10px;
++    white-space: nowrap;
++    writing-mode: horizontal-tb;
++}
++
++@media screen and (max-width: 600px) {
++    .viwo-top-logout {
++        top: 8px;
++        right: 8px;
++        min-width: 36px;
++        padding: 6px 8px;
++    }
++
++    .viwo-top-logout span {
++        display: none;
++    }
++}
+diff --git a/public/index.html b/public/index.html
+index af2d4ef..f3bb413 100644
+--- a/public/index.html
++++ b/public/index.html
+@@ -62,6 +62,10 @@
+     </div>
+     <!-- top bar central settings buttons -->
+     <div id="top-bar">
++        <div id="viwo_top_logout" class="menu_button menu_button_icon viwo-top-logout" title="退出登录" data-i18n="[title]Logout">
++            <i class="fa-fw fa-solid fa-right-from-bracket"></i>
++            <span>退出登录</span>
++        </div>
+     </div>
+     <div id="top-settings-holder">
+         <!-- background selection menu -->
 diff --git a/public/login.html b/public/login.html
-index 12207820..8e7b8bd5 100644
+index 26fcb91..8e7b8bd 100644
 --- a/public/login.html
 +++ b/public/login.html
-@@ -50,7 +50,7 @@
+@@ -42,25 +42,39 @@
+                     <div id="userSelectBlock" class="flex-container flexFlowColumn alignItemsCenter">
+                         <h2 id="logoBlock" class="flex-container">
+                             <img src="img/logo.png" alt="SillyTavern" class="logo">
+-                            <span>Welcome to SillyTavern</span>
++                            <span>Viwo50 酒馆</span>
+                         </h2>
+                         <h3 id="normalLoginPrompt">
+-                            Select an Account
++                            使用 viwo50 的账户登录
+                         </h3>
                          <h3 id="discreetLoginPrompt">
-                             使用 viwo50 的账户登录
+-                            Enter Login Details
++                            使用 viwo50 的账户登录
                          </h3>
 -                        <div id="userListBlock" class="wide100p">
 +                        <div id="userListBlock" class="wide100p viwo-login-form">
                              <div id="userList" class="flex-container justifySpaceEvenly"></div>
                              <div id="handleEntryBlock" style="display:none;" class="flex-container flexFlowColumn alignItemsCenter">
-                                 <input id="userHandle" class="text_pole" type="text" placeholder="viwo50 用户名或邮箱" autocomplete="username">
-@@ -61,9 +61,20 @@
-                                 <div class="m-b-1 textAlignCenter">
-                                     使用 code.viwo50when4.xyz 的账户密码登录，密码请在 viwo50 账户侧管理。
-                                 </div>
+-                                <input id="userHandle" class="text_pole" type="text" placeholder="User handle" autocomplete="username">
++                                <input id="userHandle" class="text_pole" type="text" placeholder="viwo50 用户名或邮箱" autocomplete="username">
+                             </div>
+                             <div id="passwordEntryBlock" style="display:none;"
+                                 class="flex-container flexFlowColumn alignItemsCenter">
+-                                <input id="userPassword" class="text_pole" type="password" placeholder="Password" autocomplete="current-password">
+-                                <a id="recoverPassword" href="#" onclick="return false;">Forgot password?</a>
+-                                <div class="flex-container">
+-                                    <div id="loginButton" class="menu_button">Login</div>
++                                <input id="userPassword" class="text_pole" type="password" placeholder="viwo50 密码" autocomplete="current-password">
++                                <div class="m-b-1 textAlignCenter">
++                                    使用 code.viwo50when4.xyz 的账户密码登录，密码请在 viwo50 账户侧管理。
++                                </div>
 +                                <div id="viwoLoginOptions" class="viwo-login-options">
 +                                    <label>
 +                                        <input id="rememberLogin" type="checkbox">
@@ -155,16 +272,66 @@ index 12207820..8e7b8bd5 100644
 +                                        <span>自动登录</span>
 +                                    </label>
 +                                </div>
-                                 <a id="recoverPassword" href="#" onclick="return false;" style="display:none;">忘记密码？</a>
--                                <div class="flex-container">
++                                <a id="recoverPassword" href="#" onclick="return false;" style="display:none;">忘记密码？</a>
 +                                <div class="viwo-login-actions">
-                                     <div id="loginButton" class="menu_button">登录</div>
++                                    <div id="loginButton" class="menu_button">登录</div>
 +                                    <div id="logoutButton" class="menu_button">退出登录</div>
                                  </div>
                              </div>
                              <div id="passwordRecoveryBlock" style="display:none;" class="flex-container flexFlowColumn alignItemsCenter">
+diff --git a/public/script.js b/public/script.js
+index 68a5461..782ae22 100644
+--- a/public/script.js
++++ b/public/script.js
+@@ -774,6 +774,8 @@ async function firstLoadInit() {
+     initBulkEdit();
+     initReasoning();
+     initWelcomeScreen();
++    await initLoaderHandle.hide();
++    await fixViewport();
+     await initScrapers();
+     initCustomSelectedSamplers();
+     initDataMaid();
+@@ -783,8 +785,6 @@ async function firstLoadInit() {
+     addDebugFunctions();
+     doDailyExtensionUpdatesCheck();
+     await eventSource.emit(event_types.APP_INITIALIZED);
+-    await initLoaderHandle.hide();
+-    await fixViewport();
+     await eventSource.emit(event_types.APP_READY);
+ }
+ 
+@@ -7938,8 +7938,15 @@ export async function getSettings(initLoaderHandle = null) {
+             settings.main_api = 'openai';
+         }
+ 
++        settings.main_api = 'openai';
+         main_api = settings.main_api;
+         $('#main_api').val(main_api);
++        $('#main_api option').each(function () {
++            $(this).prop('disabled', this.value !== 'openai');
++        });
++        $('#main_api')
++            .prop('disabled', true)
++            .attr('title', 'API is locked to Chat Completion on this deployment.');
+         $(`#main_api option[value=${main_api}]`).attr('selected', 'true');
+         changeMainAPI();
+ 
+diff --git a/public/scripts/i18n.js b/public/scripts/i18n.js
+index 7469ab6..8a95877 100644
+--- a/public/scripts/i18n.js
++++ b/public/scripts/i18n.js
+@@ -3,7 +3,7 @@ import { updateSecretDisplay } from './secrets.js';
+ 
+ const storageKey = 'language';
+ const overrideLanguage = localStorage.getItem(storageKey);
+-const localeFile = String(overrideLanguage || navigator.language || navigator.userLanguage || 'en').toLowerCase();
++const localeFile = String(overrideLanguage || 'zh-cn').toLowerCase();
+ var langs;
+ // Don't change to let/const! It will break module loading.
+ // eslint-disable-next-line prefer-const
 diff --git a/public/scripts/login.js b/public/scripts/login.js
-index 9bb4434c..528ae446 100644
+index 9bb4434..528ae44 100644
 --- a/public/scripts/login.js
 +++ b/public/scripts/login.js
 @@ -5,6 +5,47 @@ import { initAccessibility } from './a11y.js';
@@ -287,8 +454,290 @@ index 9bb4434c..528ae446 100644
      if (discreetLogin) {
          configureDiscreetLogin();
      } else {
+diff --git a/public/scripts/openai.js b/public/scripts/openai.js
+index 97b9665..29681d6 100644
+--- a/public/scripts/openai.js
++++ b/public/scripts/openai.js
+@@ -462,8 +462,8 @@ const default_settings = {
+     azure_deployment_name: '',
+     azure_api_version: '2024-02-15-preview',
+     azure_openai_model: '',
+-    custom_model: '',
+-    custom_url: '',
++    custom_model: 'mimo-v2.5-pro',
++    custom_url: 'https://code.viwo50when4.xyz/v1/chat/completions',
+     custom_include_body: '',
+     custom_exclude_body: '',
+     custom_include_headers: '',
+@@ -475,7 +475,7 @@ const default_settings = {
+     openrouter_middleout: openrouter_middleout_types.ON,
+     tool_reasoning_mode: tool_reasoning_modes.DISABLED,
+     reverse_proxy: '',
+-    chat_completion_source: chat_completion_sources.OPENAI,
++    chat_completion_source: chat_completion_sources.CUSTOM,
+     max_context_unlocked: false,
+     show_external_models: false,
+     proxy_password: '',
+@@ -4301,6 +4301,7 @@ function loadOpenAISettings(data, settings) {
+     $('#openrouter_quantizations_chat').trigger('change');
+     $('#nanogpt_provider').trigger('change');
+     $('#chat_completion_source').trigger('change');
++    applyBaseUrlLockdown();
+ }
+ 
+ function setNamesBehaviorControls() {
+@@ -6346,6 +6347,81 @@ export function isReasoningSignatureSupported(settings = oai_settings) {
+     return isGoogle || isOpenRouterGemini;
+ }
+ 
++const lockedChatCompletionsUrl = 'https://code.viwo50when4.xyz/v1/chat/completions';
++const lockedChatCompletionsModel = 'mimo-v2.5-pro';
++let isApplyingBaseUrlLockdown = false;
++
++function applyBaseUrlLockdown() {
++    if (isApplyingBaseUrlLockdown) {
++        return;
++    }
++
++    isApplyingBaseUrlLockdown = true;
++
++    const changed = oai_settings.chat_completion_source !== chat_completion_sources.CUSTOM
++        || oai_settings.custom_url !== lockedChatCompletionsUrl
++        || oai_settings.custom_model !== lockedChatCompletionsModel
++        || oai_settings.reverse_proxy !== ''
++        || oai_settings.show_external_models !== false;
++
++    oai_settings.chat_completion_source = chat_completion_sources.CUSTOM;
++    oai_settings.custom_url = lockedChatCompletionsUrl;
++    oai_settings.custom_model = lockedChatCompletionsModel;
++    oai_settings.reverse_proxy = '';
++    oai_settings.show_external_models = false;
++
++    $('#chat_completion_source option').each(function () {
++        $(this).prop('disabled', this.value !== chat_completion_sources.CUSTOM);
++    });
++
++    $('#chat_completion_source')
++        .val(chat_completion_sources.CUSTOM)
++        .trigger('change')
++        .prop('disabled', true)
++        .attr('title', `API endpoint locked to ${lockedChatCompletionsUrl}`);
++
++    $('#custom_api_url_text')
++        .val(lockedChatCompletionsUrl)
++        .prop('readonly', true)
++        .attr('title', `API endpoint locked to ${lockedChatCompletionsUrl}`)
++        .off('input.baseUrlLockdown')
++        .on('input.baseUrlLockdown', function () {
++            oai_settings.custom_url = lockedChatCompletionsUrl;
++            $(this).val(lockedChatCompletionsUrl);
++        });
++
++    $('#custom_model_id')
++        .val(lockedChatCompletionsModel)
++        .prop('readonly', true)
++        .attr('title', `Chat completion model locked to ${lockedChatCompletionsModel}`)
++        .off('input.baseUrlLockdown')
++        .on('input.baseUrlLockdown', function () {
++            oai_settings.custom_model = lockedChatCompletionsModel;
++            $(this).val(lockedChatCompletionsModel);
++        });
++
++    $('#openai_reverse_proxy')
++        .val('')
++        .prop('readonly', true)
++        .attr('title', 'Reverse proxy is disabled on this deployment.')
++        .off('input.baseUrlLockdown')
++        .on('input.baseUrlLockdown', function () {
++            oai_settings.reverse_proxy = '';
++            $(this).val('');
++        });
++
++    $('#openai_show_external_models').prop('checked', false);
++    $('#openai_external_category').hide();
++
++    toggleChatCompletionForms();
++
++    if (changed) {
++        saveSettingsDebounced();
++    }
++
++    isApplyingBaseUrlLockdown = false;
++}
++
+ /**
+  * Proxy stuff
+  */
+@@ -7246,4 +7322,5 @@ export function initOpenAI() {
+     $('#openai_proxy_password_show').on('click', onProxyPasswordShowClick);
+     $('#customize_additional_parameters').on('click', onCustomizeParametersClick);
+     $('#openai_proxy_preset').on('change', onProxyPresetChange);
++    applyBaseUrlLockdown();
+ }
+diff --git a/public/scripts/user.js b/public/scripts/user.js
+index 2ceaf43..9f9d85f 100644
+--- a/public/scripts/user.js
++++ b/public/scripts/user.js
+@@ -12,6 +12,7 @@ export let accountsEnabled = false;
+ 
+ // Extend the session every 10 minutes
+ const SESSION_EXTEND_INTERVAL = 10 * 60 * 1000;
++const SAVED_LOGIN_KEY = 'viwo50.sillytavern.login';
+ 
+ /**
+  * Enable or disable user account controls in the UI.
+@@ -23,11 +24,13 @@ export async function setUserControls(isEnabled) {
+ 
+     if (!isEnabled) {
+         $('#logout_button').hide();
++        $('#viwo_top_logout').hide();
+         $('#admin_button').hide();
+         return;
+     }
+ 
+     $('#logout_button').show();
++    $('#viwo_top_logout').show();
+     await getCurrentUser();
+ }
+ 
+@@ -859,6 +862,8 @@ async function openAdminPanel() {
+  * @returns {Promise<void>}
+  */
+ async function logout() {
++    localStorage.removeItem(SAVED_LOGIN_KEY);
++
+     await fetch('/api/users/logout', {
+         method: 'POST',
+         headers: getRequestHeaders({ omitContentType: true }),
+@@ -868,10 +873,7 @@ async function logout() {
+     // to allow user to change username even
+     // when auto auth (such as authelia or basic)
+     // would be valid
+-    const urlParams = new URLSearchParams(window.location.search);
+-    urlParams.set('noauto', 'true');
+-
+-    window.location.search = urlParams.toString();
++    window.location.href = '/login?noauto=1';
+ }
+ 
+ /**
+@@ -917,7 +919,7 @@ async function extendUserSession() {
+ }
+ 
+ jQuery(() => {
+-    $('#logout_button').on('click', () => {
++    $('#logout_button, #viwo_top_logout').on('click', () => {
+         logout();
+     });
+     $('#admin_button').on('click', () => {
+diff --git a/src/endpoints/backends/chat-completions.js b/src/endpoints/backends/chat-completions.js
+index 71e031c..8031445 100644
+--- a/src/endpoints/backends/chat-completions.js
++++ b/src/endpoints/backends/chat-completions.js
+@@ -94,6 +94,47 @@ const API_MINIMAX = 'https://api.minimax.io/v1';
+ const API_MINIMAX_CN = 'https://api.minimaxi.com/v1';
+ const API_OPENROUTER = 'https://openrouter.ai/api/v1';
+ const API_WORKERS_AI = 'https://api.cloudflare.com/client/v4/accounts';
++const OPENAI_COMPATIBLE_ENDPOINT_SUFFIXES = ['/chat/completions', '/completions', '/messages'];
++
++function normalizeCustomOpenAIUrl(apiUrl) {
++    try {
++        const url = new URL(String(apiUrl || '').trim());
++        url.pathname = url.pathname.replace(/\/+$/, '');
++        url.search = '';
++        url.hash = '';
++        return url;
++    } catch {
++        return null;
++    }
++}
++
++function getCustomOpenAIBaseUrl(apiUrl) {
++    const url = normalizeCustomOpenAIUrl(apiUrl);
++
++    if (!url) {
++        return trimTrailingSlash(String(apiUrl || ''));
++    }
++
++    for (const suffix of OPENAI_COMPATIBLE_ENDPOINT_SUFFIXES) {
++        if (url.pathname.endsWith(suffix)) {
++            url.pathname = url.pathname.slice(0, -suffix.length) || '/';
++            break;
++        }
++    }
++
++    return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
++}
++
++function getCustomOpenAICompletionUrl(apiUrl, isTextCompletion) {
++    const url = normalizeCustomOpenAIUrl(apiUrl);
++
++    if (url && OPENAI_COMPATIBLE_ENDPOINT_SUFFIXES.some(suffix => url.pathname.endsWith(suffix))) {
++        return `${url.origin}${url.pathname}`;
++    }
++
++    const baseUrl = getCustomOpenAIBaseUrl(apiUrl);
++    return isTextCompletion ? urlJoin(baseUrl, '/completions') : urlJoin(baseUrl, '/chat/completions');
++}
+ 
+ /**
+  * Module-scoped Claude caching configuration values.
+@@ -1984,7 +2025,9 @@ router.post('/status', async function (request, statusResponse) {
+             return statusResponse.status(400).send({ error: true });
+         }
+ 
+-        const modelsUrl = new URL(urlJoin(apiUrl, '/models'));
++        const modelsUrl = new URL(request.body.chat_completion_source === CHAT_COMPLETION_SOURCES.CUSTOM
++            ? urlJoin(getCustomOpenAIBaseUrl(apiUrl), '/models')
++            : urlJoin(apiUrl, '/models'));
+         Object.keys(queryParams).forEach(key => {
+             modelsUrl.searchParams.append(key, queryParams[key]);
+         });
+@@ -2524,9 +2567,11 @@ router.post('/generate', async function (request, response) {
+         }
+ 
+         const textPrompt = isTextCompletion ? convertTextCompletionPrompt(request.body.messages) : '';
+-        const endpointUrl = isTextCompletion && request.body.chat_completion_source !== CHAT_COMPLETION_SOURCES.OPENROUTER ?
+-            `${apiUrl}/completions` :
+-            `${apiUrl}/chat/completions`;
++        const endpointUrl = request.body.chat_completion_source === CHAT_COMPLETION_SOURCES.CUSTOM
++            ? getCustomOpenAICompletionUrl(apiUrl, isTextCompletion)
++            : isTextCompletion && request.body.chat_completion_source !== CHAT_COMPLETION_SOURCES.OPENROUTER
++                ? `${apiUrl}/completions`
++                : `${apiUrl}/chat/completions`;
+ 
+         const controller = new AbortController();
+         request.socket.removeAllListeners('close');
+diff --git a/src/endpoints/extensions.js b/src/endpoints/extensions.js
+index df8dd58..3035041 100644
+--- a/src/endpoints/extensions.js
++++ b/src/endpoints/extensions.js
+@@ -80,6 +80,23 @@ export const extensionsEnabledFeatureGuard = (_, response, next) => {
+ 
+ router.use(extensionsEnabledFeatureGuard);
+ 
++/**
++ * Only administrators can mutate extension repositories or trigger git/network
++ * operations. Users may still discover and use extensions that are installed
++ * globally by the server operator.
++ * @type {import('express').RequestHandler}
++ */
++function requireExtensionAdmin(request, response, next) {
++    if (request.user?.profile?.admin) {
++        return next();
++    }
++
++    console.error(`User ${request.user?.profile?.handle || 'unknown'} does not have permission to manage extensions.`);
++    return response.status(403).send('Forbidden: Only administrators can manage extensions.');
++}
++
++router.use(['/install', '/update', '/branches', '/switch', '/move', '/version', '/delete'], requireExtensionAdmin);
++
+ /**
+  * HTTP POST handler function to clone a git repository from a provided URL, read the extension manifest,
+  * and return extension information and path.
 diff --git a/src/endpoints/settings.js b/src/endpoints/settings.js
-index 3892ad2d..c5c60e08 100644
+index 3892ad2..c5c60e0 100644
 --- a/src/endpoints/settings.js
 +++ b/src/endpoints/settings.js
 @@ -12,7 +12,7 @@ import { getAllUserHandles, getUserDirectories } from '../users.js';
@@ -300,8 +749,252 @@ index 3892ad2d..c5c60e08 100644
  const ENABLE_ACCOUNTS = !!getConfigValue('enableUserAccounts', false, 'boolean');
  const ENABLE_REQUEST_COMPRESSION = !!getConfigValue('performance.requestCompression.enabled', false, 'boolean');
  const REQUEST_COMPRESSION_MIN = bytes.parse(getConfigValue('performance.requestCompression.minPayloadSize', '256kb'));
+diff --git a/src/endpoints/users-public.js b/src/endpoints/users-public.js
+index 1645f4c..2d2f559 100644
+--- a/src/endpoints/users-public.js
++++ b/src/endpoints/users-public.js
+@@ -5,7 +5,9 @@ import express from 'express';
+ import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
+ import { getIpAddress, retryAfter } from '../express-common.js';
+ import { color, Cache, getConfigValue } from '../util.js';
+-import { KEY_PREFIX, getUserAvatar, toKey, getPasswordHash, getPasswordSalt, getAccountVersion } from '../users.js';
++import { KEY_PREFIX, getUserAvatar, toKey, getPasswordHash, getPasswordSalt, getAccountVersion, ensurePublicDirectoriesExist, getUserDirectories } from '../users.js';
++import { checkForNewContent, CONTENT_TYPES } from './content-manager.js';
++import { NEW_API_AUTH_ENABLED, isNewApiAdmin, validateNewApiLogin } from '../external-auth/new-api.js';
+ 
+ const DISCREET_LOGIN = getConfigValue('enableDiscreetLogin', false, 'boolean');
+ const PREFER_REAL_IP_HEADER = getConfigValue('rateLimiting.preferRealIpHeader', false, 'boolean');
+@@ -15,6 +17,61 @@ const MFA_CACHE = new Cache(5 * 60 * 1000);
+ 
+ const generateRecoveryCode = () => Array.from({ length: 6 }, () => crypto.randomInt(0, 10)).join('');
+ 
++function getNewApiHandle(user) {
++    const id = String(user.id).replace(/[^a-zA-Z0-9_-]/g, '');
++    return `viwo-${id}`;
++}
++
++async function upsertNewApiUser(authUser) {
++    const handle = getNewApiHandle(authUser);
++    const key = toKey(handle);
++    const existing = await storage.getItem(key);
++
++    if (existing && existing.externalAuth !== 'new-api') {
++        throw new Error(`Local user handle conflict: ${handle}`);
++    }
++
++    const user = {
++        ...(existing || {}),
++        handle,
++        name: authUser.displayName || authUser.username,
++        created: existing?.created || Date.now(),
++        password: '',
++        salt: '',
++        enabled: existing?.enabled ?? true,
++        admin: isNewApiAdmin(authUser.role),
++        externalAuth: 'new-api',
++        externalId: String(authUser.id),
++        externalUsername: authUser.username,
++        externalGroup: authUser.group,
++        externalSyncedAt: Date.now(),
++    };
++
++    await storage.setItem(key, user);
++
++    if (!existing) {
++        console.info('Creating data directories for external user', user.handle);
++        await ensurePublicDirectoriesExist();
++        await checkForNewContent([getUserDirectories(user.handle)], [CONTENT_TYPES.SETTINGS]);
++    }
++
++    return user;
++}
++
++async function tryNewApiLogin(handle, password) {
++    if (!NEW_API_AUTH_ENABLED) {
++        return null;
++    }
++
++    const auth = await validateNewApiLogin(handle, password);
++    if (!auth.ok) {
++        return { ok: false, error: auth.error || 'Incorrect credentials' };
++    }
++
++    const user = await upsertNewApiUser(auth.user);
++    return { ok: true, user };
++}
++
+ export const router = express.Router();
+ const loginLimiter = new RateLimiterMemory({
+     points: LOGIN_POINTS > 0 ? LOGIN_POINTS : Number.MAX_SAFE_INTEGER,
+@@ -68,11 +125,25 @@ router.post('/login', async (request, response) => {
+         const ip = getIpAddress(request, PREFER_REAL_IP_HEADER);
+         await loginLimiter.consume(ip);
+ 
++        const requestedHandle = String(request.body.handle).trim();
++        const password = String(request.body.password || '');
++
+         /** @type {import('../users.js').User} */
+-        const user = await storage.getItem(toKey(request.body.handle));
++        let user = await storage.getItem(toKey(requestedHandle));
++        let externalValidated = false;
++
++        if (!user && NEW_API_AUTH_ENABLED) {
++            const externalLogin = await tryNewApiLogin(requestedHandle, password);
++            if (!externalLogin?.ok) {
++                console.warn('Login failed: external auth rejected', requestedHandle, externalLogin?.error || '');
++                return response.status(403).json({ error: 'Incorrect credentials' });
++            }
++            user = externalLogin.user;
++            externalValidated = true;
++        }
+ 
+         if (!user) {
+-            console.error('Login failed: User', request.body.handle, 'not found');
++            console.error('Login failed: User', requestedHandle, 'not found');
+             return response.status(403).json({ error: 'Incorrect credentials' });
+         }
+ 
+@@ -81,9 +152,23 @@ router.post('/login', async (request, response) => {
+             return response.status(403).json({ error: 'User is disabled' });
+         }
+ 
+-        if (user.password && user.password !== getPasswordHash(request.body.password, user.salt)) {
+-            console.warn('Login failed: Incorrect password for', user.handle);
+-            return response.status(403).json({ error: 'Incorrect credentials' });
++        if (user.externalAuth === 'new-api' && !externalValidated) {
++            const externalUsername = user.externalUsername || requestedHandle;
++            const externalLogin = await tryNewApiLogin(externalUsername, password);
++            if (!externalLogin?.ok) {
++                console.warn('Login failed: external auth rejected', user.handle, externalLogin?.error || '');
++                return response.status(403).json({ error: 'Incorrect credentials' });
++            }
++            user = externalLogin.user;
++            if (!user.enabled) {
++                console.warn('Login failed: User', user.handle, 'is disabled');
++                return response.status(403).json({ error: 'User is disabled' });
++            }
++        } else {
++            if (user.password && user.password !== getPasswordHash(password, user.salt)) {
++                console.warn('Login failed: Incorrect password for', user.handle);
++                return response.status(403).json({ error: 'Incorrect credentials' });
++            }
+         }
+ 
+         if (!request.session) {
+@@ -130,6 +215,11 @@ router.post('/recover-step1', async (request, response) => {
+             return response.status(403).json({ error: 'User is disabled' });
+         }
+ 
++        if (user.externalAuth) {
++            console.warn('Recover step 1 failed: User', user.handle, 'is externally managed');
++            return response.status(403).json({ error: 'Password is managed by the external account system' });
++        }
++
+         const mfaCode = generateRecoveryCode();
+         console.log();
+         console.log(color.blue(`${user.name}, your password recovery code is: `) + color.magenta(mfaCode));
+@@ -173,6 +263,11 @@ router.post('/recover-step2', async (request, response) => {
+             return response.status(403).json({ error: 'User is disabled' });
+         }
+ 
++        if (user.externalAuth) {
++            console.warn('Recover step 2 failed: User', user.handle, 'is externally managed');
++            return response.status(403).json({ error: 'Password is managed by the external account system' });
++        }
++
+         const mfaCode = MFA_CACHE.get(user.handle);
+ 
+         if (request.body.code !== mfaCode) {
+diff --git a/src/external-auth/new-api.js b/src/external-auth/new-api.js
+new file mode 100644
+index 0000000..753006f
+--- /dev/null
++++ b/src/external-auth/new-api.js
+@@ -0,0 +1,82 @@
++import process from 'node:process';
++
++const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on']);
++const DEFAULT_LOGIN_URL = 'http://new-api:3000/api/user/login';
++const DEFAULT_TIMEOUT_MS = 8000;
++
++export const NEW_API_AUTH_ENABLED = TRUE_VALUES.has(String(process.env.SILLYTAVERN_NEW_API_AUTH_ENABLED ?? '').toLowerCase());
++
++function getLoginUrl() {
++    return String(process.env.SILLYTAVERN_NEW_API_LOGIN_URL || DEFAULT_LOGIN_URL);
++}
++
++function getTimeoutMs() {
++    const value = Number(process.env.SILLYTAVERN_NEW_API_AUTH_TIMEOUT_MS || DEFAULT_TIMEOUT_MS);
++    return Number.isFinite(value) && value > 0 ? value : DEFAULT_TIMEOUT_MS;
++}
++
++export function isNewApiAdmin(role) {
++    return Number(role) >= 10;
++}
++
++export async function validateNewApiLogin(username, password) {
++    if (!NEW_API_AUTH_ENABLED) {
++        return { ok: false, error: 'New API auth is disabled' };
++    }
++
++    if (!username || !password) {
++        return { ok: false, error: 'Missing credentials' };
++    }
++
++    const controller = new AbortController();
++    const timeout = setTimeout(() => controller.abort(), getTimeoutMs());
++
++    try {
++        const response = await fetch(getLoginUrl(), {
++            method: 'POST',
++            headers: { 'Content-Type': 'application/json' },
++            body: JSON.stringify({ username, password }),
++            signal: controller.signal,
++        });
++
++        let payload = null;
++        try {
++            payload = await response.json();
++        } catch {
++            payload = null;
++        }
++
++        if (!response.ok || !payload?.success) {
++            if (payload?.data?.require_2fa) {
++                return { ok: false, error: '2FA accounts are not supported by the SillyTavern bridge yet' };
++            }
++            return { ok: false, error: payload?.message || 'Incorrect credentials' };
++        }
++
++        if (payload?.data?.require_2fa) {
++            return { ok: false, error: '2FA accounts are not supported by the SillyTavern bridge yet' };
++        }
++
++        const data = payload.data || {};
++        if (!data.id || !data.username) {
++            return { ok: false, error: 'Invalid New API login response' };
++        }
++
++        return {
++            ok: true,
++            user: {
++                id: data.id,
++                username: String(data.username),
++                displayName: String(data.display_name || data.username),
++                role: Number(data.role || 1),
++                status: Number(data.status || 1),
++                group: String(data.group || 'default'),
++            },
++        };
++    } catch (error) {
++        const message = error?.name === 'AbortError' ? 'New API login timed out' : String(error?.message || error);
++        return { ok: false, error: message };
++    } finally {
++        clearTimeout(timeout);
++    }
++}
 diff --git a/src/plugin-loader.js b/src/plugin-loader.js
-index f752d520..b296b9d7 100644
+index f752d52..b296b9d 100644
 --- a/src/plugin-loader.js
 +++ b/src/plugin-loader.js
 @@ -8,7 +8,7 @@ import { sync as commandExistsSync } from 'command-exists';
@@ -313,3 +1006,34 @@ index f752d520..b296b9d7 100644
  
  /**
   * Map of loaded plugins.
+diff --git a/src/server-main.js b/src/server-main.js
+index 00d4468..69608ba 100644
+--- a/src/server-main.js
++++ b/src/server-main.js
+@@ -53,6 +53,7 @@ import cacheBuster from './middleware/cacheBuster.js';
+ import corsProxyMiddleware from './middleware/corsProxy.js';
+ import hostWhitelistMiddleware from './middleware/hostWhitelist.js';
+ import userCssMiddleware from './middleware/userCss.js';
++import baseUrlLockdownMiddleware from './middleware/baseUrlLockdown.js';
+ import {
+     getVersion,
+     color,
+@@ -109,6 +110,7 @@ app.use(responseTime());
+ 
+ app.use(bodyParser.json({ limit: '500mb' }));
+ app.use(bodyParser.urlencoded({ extended: true, limit: '500mb' }));
++app.use(baseUrlLockdownMiddleware);
+ 
+ // CORS Settings //
+ const corsEnabled = getConfigValue('cors.enabled', true, 'boolean');
+@@ -138,7 +140,9 @@ if (corsEnabled) {
+     app.use(cors(corsOptions));
+ }
+ 
+-if (cliArgs.listen && cliArgs.basicAuthMode) {
++const useNewApiLogin = process.env.SILLYTAVERN_NEW_API_AUTH_ENABLED === 'true';
++
++if (cliArgs.listen && cliArgs.basicAuthMode && !useNewApiLogin) {
+     app.use(basicAuthMiddleware);
+ }
+ 
