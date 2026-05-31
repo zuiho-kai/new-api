@@ -32480,7 +32480,7 @@ index 7c23c59..364797c 100644
 +    }
 +}
 diff --git a/public/index.html b/public/index.html
-index af2d4ef..7025bca 100644
+index af2d4ef..77aa45e 100644
 --- a/public/index.html
 +++ b/public/index.html
 @@ -17,7 +17,7 @@
@@ -32488,7 +32488,7 @@ index af2d4ef..7025bca 100644
          }
      </style>
 -    <link rel="preload" as="style" href="style.css">
-+    <link rel="preload" as="style" href="style.css?viwo=20260531a">
++    <link rel="preload" as="style" href="style.css?viwo=20260531b">
      <link rel="manifest" crossorigin="use-credentials" href="manifest.json">
      <link href="webfonts/NotoSans/stylesheet.css" rel="stylesheet">
      <link href="webfonts/NotoSansMono/stylesheet.css" rel="stylesheet">
@@ -32497,7 +32497,7 @@ index af2d4ef..7025bca 100644
      <link rel="apple-touch-icon" sizes="114x114" href="img/apple-icon-114x114.png" />
      <link rel="apple-touch-icon" sizes="144x144" href="img/apple-icon-144x144.png" />
 -    <link rel="stylesheet" type="text/css" href="style.css">
-+    <link rel="stylesheet" type="text/css" href="style.css?viwo=20260531a">
++    <link rel="stylesheet" type="text/css" href="style.css?viwo=20260531b">
      <link rel="stylesheet" type="text/css" href="css/st-tailwind.css">
      <link rel="stylesheet" type="text/css" href="css/rm-groups.css">
      <link rel="stylesheet" type="text/css" href="css/group-avatars.css">
@@ -32911,7 +32911,7 @@ index 2ceaf43..9f9d85f 100644
      });
      $('#admin_button').on('click', () => {
 diff --git a/public/style.css b/public/style.css
-index 054a6b8..135cea0 100644
+index 054a6b8..c77a3de 100644
 --- a/public/style.css
 +++ b/public/style.css
 @@ -6454,3 +6454,29 @@ body:not(.movingUI) .drawer-content.maximized {
@@ -32933,7 +32933,7 @@ index 054a6b8..135cea0 100644
 +    writing-mode: horizontal-tb;
 +}
 +
-+@media screen and (max-width: 600px) {
++@media screen and (max-width: 1000px) {
 +    .viwo-top-logout {
 +        display: none !important;
 +    }
