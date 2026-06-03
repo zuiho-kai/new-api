@@ -1,0 +1,95 @@
+diff --git a/public/scripts/world-info.js b/public/scripts/world-info.js
+index 49577d7..49167b4 100644
+--- a/public/scripts/world-info.js
++++ b/public/scripts/world-info.js
+@@ -88,6 +88,32 @@ const saveSettingsDebounced = debounce(() => {
+ const sortFn = (a, b) => b.order - a.order;
+ let updateEditor = (navigation, flashOnNav = true) => { console.debug('Triggered WI navigation', navigation, flashOnNav); };
+ 
++async function getSanitizedWorldInfoName(name) {
++    if (!name) {
++        return '';
++    }
++
++    const sanitizedFileName = await getSanitizedFilename(`${name}.json`);
++    return sanitizedFileName.replace(/\.json$/i, '');
++}
++
++async function resolveWorldInfoName(name) {
++    if (!name) {
++        return '';
++    }
++
++    if (world_names?.includes(name)) {
++        return name;
++    }
++
++    try {
++        const sanitizedName = await getSanitizedWorldInfoName(name);
++        return world_names?.includes(sanitizedName) ? sanitizedName : name;
++    } catch {
++        return name;
++    }
++}
++
+ // Do not optimize. updateEditor is a function that is updated by the displayWorldEntries with new data.
+ export const worldInfoFilter = new FilterHelper(() => updateEditor());
+ export const SORT_ORDER_KEY = 'world_info_sort_order';
+@@ -1058,6 +1084,8 @@ function registerWorldInfoSlashCommands() {
+     }
+ 
+     async function getEntriesFromFile(file, { args = {}, unnamed = null, callbackName = 'getEntriesFromFile' } = {}) {
++        file = await resolveWorldInfoName(file);
++
+         if (!file || !world_names.includes(file)) {
+             toastr.warning(t`Valid World Info file name is required`);
+             logSlashCommandWarn(`${callbackName}: Valid World Info file name is required`, args, unnamed);
+@@ -1311,7 +1339,7 @@ function registerWorldInfoSlashCommands() {
+     }
+ 
+     async function createEntryCallback(args, content) {
+-        const file = args.file;
++        const file = await resolveWorldInfoName(args.file);
+         const key = args.key;
+ 
+         const data = await loadWorldInfo(file);
+@@ -1341,7 +1369,7 @@ function registerWorldInfoSlashCommands() {
+     }
+ 
+     async function setEntryFieldCallback(args, value) {
+-        const file = args.file;
++        const file = await resolveWorldInfoName(args.file);
+         const uid = args.uid;
+         const field = args.field || 'content';
+         const tags = getContext().tags;
+@@ -5623,9 +5651,11 @@ export async function importEmbeddedWorldInfo(skipPopup = false) {
+     }
+ 
+     const bookName = characters[chid]?.data?.character_book?.name || `${characters[chid]?.name}'s Lorebook`;
++    const sanitizedBookName = await getSanitizedWorldInfoName(bookName);
++    const finalBookName = sanitizedBookName || bookName;
+ 
+     if (!skipPopup) {
+-        const confirmation = await Popup.show.confirm(t`Are you sure you want to import '${bookName}'?`, world_names.includes(bookName) ? t`It will overwrite the World/Lorebook with the same name.` : '');
++        const confirmation = await Popup.show.confirm(t`Are you sure you want to import '${finalBookName}'?`, world_names.includes(finalBookName) ? t`It will overwrite the World/Lorebook with the same name.` : '');
+         if (!confirmation) {
+             return;
+         }
+@@ -5633,13 +5663,13 @@ export async function importEmbeddedWorldInfo(skipPopup = false) {
+ 
+     const convertedBook = convertCharacterBook(characters[chid].data.character_book);
+ 
+-    await saveWorldInfo(bookName, convertedBook, true);
++    await saveWorldInfo(finalBookName, convertedBook, true);
+     await updateWorldInfoList();
+-    $('#character_world').val(bookName).trigger('change');
++    $('#character_world').val(finalBookName).trigger('change');
+ 
+-    toastr.success(t`The world '${bookName}' has been imported and linked to the character successfully.`, t`World/Lorebook imported`);
++    toastr.success(t`The world '${finalBookName}' has been imported and linked to the character successfully.`, t`World/Lorebook imported`);
+ 
+-    const newIndex = world_names.indexOf(bookName);
++    const newIndex = world_names.indexOf(finalBookName);
+     if (newIndex >= 0) {
+         //show&draw the WI panel before..
+         $('#WIDrawerIcon').trigger('click');
