@@ -33009,7 +33009,7 @@ diff --git a/public/style.css b/public/style.css
 index 054a6b8..c77a3de 100644
 --- a/public/style.css
 +++ b/public/style.css
-@@ -6454,3 +6454,29 @@ body:not(.movingUI) .drawer-content.maximized {
+@@ -6454,3 +6454,43 @@ body:not(.movingUI) .drawer-content.maximized {
          border-width: 2px;
      }
  }
@@ -33037,6 +33037,20 @@ index 054a6b8..c77a3de 100644
 +        top: auto !important;
 +        left: 8px !important;
 +        bottom: calc(var(--bottomFormBlockSize) + 8px + env(safe-area-inset-bottom, 0px)) !important;
++    }
++}
++
++/* viwo-worldinfo-layout-fix */
++@media screen and (min-width: 1001px) {
++    body:not(.movingUI) #WorldInfo.openDrawer:not(.maximized) {
++        width: min(1180px, calc(100dvw - 32px));
++        max-width: calc(100dvw - 32px);
++        max-height: calc(100dvh - var(--topBarBlockSize) - 16px);
++    }
++
++    body:not(.movingUI) #WorldInfo.openDrawer:not(.maximized) #world_popup,
++    body:not(.movingUI) #WorldInfo.openDrawer:not(.maximized) #world_popup_entries_list {
++        min-width: 0;
 +    }
 +}
 diff --git a/src/endpoints/backends/chat-completions.js b/src/endpoints/backends/chat-completions.js
