@@ -51,6 +51,31 @@ jobs:
               exit 1
             fi
 
+            python3 - <<'PY'
+            from pathlib import Path
+
+            path = Path("public/style.css")
+            marker = "/* viwo-worldinfo-layout-fix */"
+            block = """
+            /* viwo-worldinfo-layout-fix */
+            @media screen and (min-width: 1001px) {
+                body:not(.movingUI) #WorldInfo.openDrawer:not(.maximized) {
+                    width: min(1180px, calc(100dvw - 32px));
+                    max-width: calc(100dvw - 32px);
+                    max-height: calc(100dvh - var(--topBarBlockSize) - 16px);
+                }
+
+                body:not(.movingUI) #WorldInfo.openDrawer:not(.maximized) #world_popup,
+                body:not(.movingUI) #WorldInfo.openDrawer:not(.maximized) #world_popup_entries_list {
+                    min-width: 0;
+                }
+            }
+            """.strip()
+            text = path.read_text(encoding="utf-8")
+            if marker not in text:
+                path.write_text(text.rstrip() + "\n\n" + block + "\n", encoding="utf-8")
+            PY
+
             node --check src/external-auth/new-api.js
             node --check src/endpoints/users-public.js
             node --check public/scripts/i18n.js
