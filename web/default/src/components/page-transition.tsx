@@ -64,10 +64,15 @@ export function AnimatedOutlet() {
   const routeKey = useRouterState({
     select: (s) => s.matches.at(-1)?.routeId ?? s.location.pathname,
   })
+  const isFullBleedRoute =
+    routeKey === '/chat2link' || routeKey.startsWith('/chat/')
 
   if (shouldReduce) {
     return (
-      <div className='flex min-h-0 flex-1 flex-col'>
+      <div
+        className='flex min-h-0 flex-1 flex-col'
+        data-route-full-bleed={isFullBleedRoute || undefined}
+      >
         <Outlet />
       </div>
     )
@@ -80,6 +85,7 @@ export function AnimatedOutlet() {
       animate={MOTION_VARIANTS.pageEnter.animate}
       transition={MOTION_TRANSITION.fast}
       className='flex min-h-0 flex-1 flex-col'
+      data-route-full-bleed={isFullBleedRoute || undefined}
     >
       <Outlet />
     </motion.div>
