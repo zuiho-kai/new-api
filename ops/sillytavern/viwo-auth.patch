@@ -33009,7 +33009,7 @@ diff --git a/public/style.css b/public/style.css
 index 054a6b8..c77a3de 100644
 --- a/public/style.css
 +++ b/public/style.css
-@@ -6454,3 +6454,43 @@ body:not(.movingUI) .drawer-content.maximized {
+@@ -6454,3 +6454,58 @@ body:not(.movingUI) .drawer-content.maximized {
          border-width: 2px;
      }
  }
@@ -33041,16 +33041,31 @@ index 054a6b8..c77a3de 100644
 +}
 +
 +/* viwo-worldinfo-layout-fix */
-+@media screen and (min-width: 1001px) {
-+    body:not(.movingUI) #WorldInfo.openDrawer:not(.maximized) {
-+        width: min(1180px, calc(100dvw - 32px));
-+        max-width: calc(100dvw - 32px);
-+        max-height: calc(100dvh - var(--topBarBlockSize) - 16px);
-+    }
++#WorldInfo.openDrawer {
++    width: min(1180px, calc(100dvw - 32px)) !important;
++    min-width: min(450px, calc(100dvw - 32px)) !important;
++    max-width: calc(100dvw - 32px) !important;
++    max-height: calc(100dvh - var(--topBarBlockSize) - 16px) !important;
++    left: 0 !important;
++    right: 0 !important;
++    margin: 0 auto !important;
++}
 +
-+    body:not(.movingUI) #WorldInfo.openDrawer:not(.maximized) #world_popup,
-+    body:not(.movingUI) #WorldInfo.openDrawer:not(.maximized) #world_popup_entries_list {
-+        min-width: 0;
++#WorldInfo.openDrawer.maximized {
++    top: var(--topBarBlockSize) !important;
++}
++
++#WorldInfo.openDrawer #world_popup,
++#WorldInfo.openDrawer #world_popup_entries_list {
++    min-width: 0;
++}
++
++@media screen and (max-width: 1000px) {
++    #WorldInfo.openDrawer {
++        width: calc(100dvw - 16px) !important;
++        min-width: 0 !important;
++        max-width: calc(100dvw - 16px) !important;
++        max-height: calc(100dvh - var(--topBarBlockSize) - 8px) !important;
 +    }
 +}
 diff --git a/src/endpoints/backends/chat-completions.js b/src/endpoints/backends/chat-completions.js
