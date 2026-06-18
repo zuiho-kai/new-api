@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	defaultTrustedProxies  = "127.0.0.1/32,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10"
+	defaultTrustedProxies  = "127.0.0.1/32,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10,43.153.173.195/32"
 	defaultRemoteIPHeaders = "CF-Connecting-IP,True-Client-IP,X-Forwarded-For,X-Real-IP"
 )
 

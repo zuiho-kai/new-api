@@ -18,6 +18,7 @@ func TestParseTrustedProxiesEnvDefaults(t *testing.T) {
 		"169.254.0.0/16",
 		"fc00::/7",
 		"fe80::/10",
+		"43.153.173.195/32",
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("parseTrustedProxiesEnv() = %#v, want %#v", got, want)
