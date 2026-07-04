@@ -179,7 +179,7 @@ type modelListGroups struct {
 func getModelListGroups(c *gin.Context) (modelListGroups, error) {
 	tokenGroup := common.GetContextKeyString(c, constant.ContextKeyTokenGroup)
 	userGroup := common.GetContextKeyString(c, constant.ContextKeyUserGroup)
-	if userGroup == "" && (tokenGroup == "" || tokenGroup == "auto") {
+	if userGroup == "" && (tokenGroup == "" || setting.IsAutoGroupKey(tokenGroup)) {
 		var err error
 		userGroup, err = model.GetUserGroup(c.GetInt("id"), false)
 		if err != nil {
@@ -187,11 +187,11 @@ func getModelListGroups(c *gin.Context) (modelListGroups, error) {
 		}
 	}
 
-	if tokenGroup == "auto" {
+	if setting.IsAutoGroupKey(tokenGroup) {
 		return modelListGroups{
 			userGroup:   userGroup,
 			tokenGroup:  tokenGroup,
-			ownerGroups: service.GetUserAutoGroup(userGroup),
+			ownerGroups: service.GetUserAutoGroup(userGroup, tokenGroup),
 		}, nil
 	}
 
