@@ -555,7 +555,6 @@ async function syncModelsFromModelSquare() {
 }
 
 let iProvider = 'openai';
-let iEndpoint = 'generations';
 let iQuality = 'low';
 let iImageSize = '1K';
 let iCount = 1;
@@ -568,7 +567,6 @@ function setImageProvider(p) {
 }
 function updateImageFields() {
   if (iProvider === 'openai') {
-    $('#iEndpointWrap').hidden    = false;
     $('#iSizeWrap').hidden        = false;
     $('#iAspectWrap').hidden      = true;
     $('#iImageSizeWrap').hidden   = true;
@@ -576,7 +574,6 @@ function updateImageFields() {
     $('#iCountWrap').hidden       = false;
     fillSelect($('#iSize'), IMAGE_SIZES_OPENAI);
   } else {
-    $('#iEndpointWrap').hidden    = true;
     $('#iSizeWrap').hidden        = true;
     $('#iAspectWrap').hidden      = false;
     $('#iImageSizeWrap').hidden   = false;
@@ -585,6 +582,10 @@ function updateImageFields() {
     const m = $('#iModel').value || IMAGE_PROVIDERS.gemini.models[0];
     fillSelect($('#iAspect'), ASPECT_BY_MODEL[m] || ASPECT_BY_MODEL.nanobananapro);
   }
+}
+
+function resolveOpenAIImageEndpoint(refList = refs.image) {
+  return refList.length ? 'edits' : 'generations';
 }
 
 // ============================================================
@@ -924,14 +925,15 @@ function buildImageRequest() {
   const model = $('#iModel').value;
   let path, body;
   if (iProvider === 'openai') {
-    path = iEndpoint === 'edits' ? '/v1/images/edits' : '/v1/images/generations';
+    const endpoint = resolveOpenAIImageEndpoint();
+    path = endpoint === 'edits' ? '/v1/images/edits' : '/v1/images/generations';
     body = {
       model,
       prompt,
       size: $('#iSize').value,
       quality: iQuality,
       response_format: 'url',
-      __endpoint: iEndpoint, // 内部记号，submit 前会移除
+      __endpoint: endpoint, // 内部记号，submit 前会移除
     };
   } else {
     path = `/v1beta/models/${model}:generateContent`;
@@ -954,11 +956,7 @@ async function submitImage() {
   if (!prompt) { toast('提示词不能为空', 'bad'); return; }
   if (!model) { toast('当前引擎暂无可用模型', 'bad'); return; }
   if (!backendCfg.imageConfigured) { toast('图像上游未配置', 'bad'); return; }
-  if (iProvider === 'openai' && iEndpoint === 'edits' && !refs.image.length) {
-    toast('图生图模式必须传至少 1 张底图', 'bad');
-    return;
-  }
-  const opts = { provider: iProvider, endpoint: iEndpoint };
+  const opts = { provider: iProvider, endpoint: body.__endpoint || 'generations' };
   if (iProvider === 'openai' && iCount > 1) opts.n = iCount;
   await submitImageRaw(body, refs.image.slice(), opts);
 }
@@ -1070,7 +1068,7 @@ async function restoreImageJobs() {
 
 async function submitImageRaw(rawBody, refList, opts = {}) {
   const provider = opts.provider || iProvider;
-  const endpoint = opts.endpoint || iEndpoint;
+  const endpoint = opts.endpoint || (provider === 'openai' ? resolveOpenAIImageEndpoint(refList) : 'generations');
   const model = rawBody.model || (rawBody.contents ? null : null);
   const n = Math.max(1, Math.min(6, parseInt(opts.n || rawBody.n || 1, 10) || 1));
   let path, body;
@@ -2394,10 +2392,7 @@ async function maybeABSubmitImage() {
     const built = buildImageRequest();
     if (!built.prompt) { toast('提示词不能为空', 'bad'); return null; }
     if (!backendCfg.imageConfigured) { toast('图像上游未配置', 'bad'); return null; }
-    if (iProvider === 'openai' && iEndpoint === 'edits' && !refs.image.length) {
-      toast('图生图模式必须传至少 1 张底图', 'bad');
-      return null;
-    }
+    const endpoint = iProvider === 'openai' ? (built.body.__endpoint || 'generations') : 'generations';
     const variants = cartesian(abState.image.dims);
     const groupId = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
     toast(`提交 ${variants.length} 个变体并行生成…`, 'ok');
@@ -2415,7 +2410,7 @@ async function maybeABSubmitImage() {
         if (v.image_size) b.generation_config.image_config.image_size = v.image_size;
       }
       const label = Object.entries(v).map(([k, val]) => `${k}=${val}`).join(' · ');
-      return submitImageRaw(b, refList, { provider: iProvider, endpoint: iEndpoint, groupId, variantLabel: label }).catch(() => null);
+      return submitImageRaw(b, refList, { provider: iProvider, endpoint, groupId, variantLabel: label }).catch(() => null);
     });
     await Promise.all(tasks2);
     return null;
@@ -2458,11 +2453,6 @@ function loadTaskIntoForm(t) {
       updateImageFields();
     }
     if (t.provider === 'openai') {
-      const ep = deriveEndpoint(t);
-      if (ep) {
-        iEndpoint = ep;
-        $$('#iEndpoint .seg-opt').forEach(b => b.classList.toggle('is-active', b.dataset.val === ep));
-      }
       if (t.params?.size) $('#iSize').value = t.params.size;
       if (t.params?.quality) {
         iQuality = t.params.quality;
@@ -2684,10 +2674,6 @@ function bindUI() {
   // image provider seg
   $$('#iProvider .seg-opt').forEach(b => b.addEventListener('click', () => setImageProvider(b.dataset.val)));
   $('#iModel').addEventListener('change', updateImageFields);
-  $$('#iEndpoint .seg-opt').forEach(b => b.addEventListener('click', () => {
-    iEndpoint = b.dataset.val;
-    $$('#iEndpoint .seg-opt').forEach(x => x.classList.toggle('is-active', x === b));
-  }));
   $$('#iQuality .seg-opt').forEach(b => b.addEventListener('click', () => {
     iQuality = b.dataset.val;
     $$('#iQuality .seg-opt').forEach(x => x.classList.toggle('is-active', x === b));
