@@ -43,6 +43,7 @@ import {
 } from './utils'
 
 type Translate = (key: string, options?: Record<string, unknown>) => string
+const AUTO_GROUP_KEY_PATTERN = /^[a-zA-Z0-9_-]+$/
 
 function formatJsonValidationError(
   t: Translate,
@@ -58,18 +59,19 @@ function formatJsonValidationError(
     )
   }
 
-  const parts = [
-    error.line && error.column
-      ? t('JSON is invalid at line {{line}}, column {{column}}.', {
-          line: error.line,
-          column: error.column,
-        })
-      : error.position !== undefined
-        ? t('JSON is invalid at position {{position}}.', {
-            position: error.position,
-          })
-        : t('JSON is invalid. Please check the syntax.'),
-  ]
+  let message = t('JSON is invalid. Please check the syntax.')
+  if (error.line && error.column) {
+    message = t('JSON is invalid at line {{line}}, column {{column}}.', {
+      line: error.line,
+      column: error.column,
+    })
+  } else if (error.position !== undefined) {
+    message = t('JSON is invalid at position {{position}}.', {
+      position: error.position,
+    })
+  }
+
+  const parts = [message]
 
   if (error.missingCommaLine) {
     parts.push(
@@ -97,6 +99,36 @@ function createJsonStringField(
   })
 }
 
+function isAutoGroupDefinition(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false
+  }
+
+  const item = value as Record<string, unknown>
+  return (
+    typeof item.key === 'string' &&
+    item.key !== '' &&
+    AUTO_GROUP_KEY_PATTERN.test(item.key) &&
+    (item.display_name === undefined ||
+      typeof item.display_name === 'string') &&
+    (item.description === undefined ||
+      typeof item.description === 'string') &&
+    Array.isArray(item.members) &&
+    item.members.every((member) => typeof member === 'string')
+  )
+}
+
+function isAutoGroupsValue(value: unknown): boolean {
+  if (!Array.isArray(value)) return false
+
+  if (value.every((item) => typeof item === 'string')) return true
+
+  if (!value.every(isAutoGroupDefinition)) return false
+
+  const keys = value.map((item) => (item as { key: string }).key)
+  return new Set(keys).size === keys.length
+}
+
 const createModelSchema = (t: Translate) =>
   z.object({
     ModelPrice: createJsonStringField(t),
@@ -119,10 +151,9 @@ const createGroupSchema = (t: Translate) =>
     UserUsableGroups: createJsonStringField(t),
     GroupGroupRatio: createJsonStringField(t),
     AutoGroups: createJsonStringField(t, {
-      predicate: (parsed) =>
-        Array.isArray(parsed) &&
-        parsed.every((item) => typeof item === 'string'),
-      predicateMessage: 'Expected a JSON array of group identifiers',
+      predicate: isAutoGroupsValue,
+      predicateMessage:
+        'Expected a JSON array of group identifiers or auto group definitions',
     }),
     DefaultUseAutoGroup: z.boolean(),
     GroupSpecialUsableGroup: createJsonStringField(t),
