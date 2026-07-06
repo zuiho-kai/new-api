@@ -410,6 +410,15 @@ const MODEL_SQUARE_ENDPOINT = 'api/pricing';
 
 function fillSelect(sel, items, current) {
   sel.innerHTML = '';
+  if (!items || items.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = '暂无可用模型';
+    opt.disabled = true;
+    opt.selected = true;
+    sel.appendChild(opt);
+    return;
+  }
   for (const it of items) {
     const opt = document.createElement('option');
     opt.value = typeof it === 'string' ? it : it.id;
@@ -531,14 +540,14 @@ async function syncModelsFromModelSquare() {
       .map(name => ({ id: name, label: labelVeoModel(name) })))
       .sort((a, b) => veoModelRank(a) - veoModelRank(b));
 
-    if (soraModels.length) VIDEO_MODELS.sora = soraModels;
-    if (veoModels.length) VIDEO_MODELS.veo = veoModels;
+    VIDEO_MODELS.sora = soraModels;
+    VIDEO_MODELS.veo = veoModels;
 
     const openaiImageModels = rows
       .map(modelNameOf)
       .filter(name => /^gpt-image-/i.test(name))
       .sort((a, b) => b.localeCompare(a));
-    if (openaiImageModels.length) IMAGE_PROVIDERS.openai.models = openaiImageModels;
+    IMAGE_PROVIDERS.openai.models = openaiImageModels;
   } catch (err) {
     console.warn('模型广场同步失败，继续使用内置模型列表', err);
   }
@@ -794,6 +803,7 @@ function buildVideoBody() {
 async function submitVideo() {
   const body = buildVideoBody();
   if (!body.prompt) { toast('提示词不能为空', 'bad'); return; }
+  if (!body.model) { toast('当前引擎暂无可用模型', 'bad'); return; }
   if (!backendCfg.videoUpstream) { toast('视频上游未配置', 'bad'); return; }
   await submitVideoRaw(body, refs.video.slice(), { provider: vProvider });
 }
@@ -939,8 +949,9 @@ function buildImageRequest() {
 }
 
 async function submitImage() {
-  const { body, prompt } = buildImageRequest();
+  const { body, model, prompt } = buildImageRequest();
   if (!prompt) { toast('提示词不能为空', 'bad'); return; }
+  if (!model) { toast('当前引擎暂无可用模型', 'bad'); return; }
   if (!backendCfg.imageConfigured) { toast('图像上游未配置', 'bad'); return; }
   if (iProvider === 'openai' && iEndpoint === 'edits' && !refs.image.length) {
     toast('图生图模式必须传至少 1 张底图', 'bad');
