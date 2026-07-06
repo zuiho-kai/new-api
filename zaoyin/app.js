@@ -1310,6 +1310,8 @@ function closeLlmPop() {
 // QUEUE rendering
 // ============================================================
 let queueFilter = 'all';
+let queueSelectMode = false;
+const queueSelectedIds = new Set();
 
 const STATUS_TEXT = {
   queued: '排队中',
@@ -1392,6 +1394,69 @@ function taskExists(localId) {
   return tasks.some(t => t.localId === localId) && !deletedTaskIds.has(localId);
 }
 
+function filteredQueueTasks() {
+  return tasks.filter(t => {
+    if (queueFilter === 'all') return true;
+    if (queueFilter === 'video' || queueFilter === 'image') return t.kind === queueFilter;
+    if (queueFilter === 'active') return ACTIVE_TASK_STATUSES.has(t.status);
+    if (queueFilter === 'completed') return t.status === 'completed';
+    if (queueFilter === 'failed') return t.status === 'failed';
+    return true;
+  });
+}
+
+function pruneQueueSelection() {
+  const existing = new Set(tasks.map(t => t.localId));
+  for (const id of Array.from(queueSelectedIds)) {
+    if (!existing.has(id)) queueSelectedIds.delete(id);
+  }
+}
+
+function syncQueueBulkButton() {
+  const btn = $('#queueBulkDelete');
+  if (!btn) return;
+  const count = queueSelectedIds.size;
+  btn.textContent = queueSelectMode ? (count ? `删除选中 ${count}` : '取消批量') : '批量删除';
+  btn.classList.toggle('btn-danger', queueSelectMode && count > 0);
+}
+
+function toggleQueueSelection(task, checked) {
+  if (!task?.localId) return;
+  if (checked) queueSelectedIds.add(task.localId);
+  else queueSelectedIds.delete(task.localId);
+  syncQueueBulkButton();
+}
+
+function addQueueSelectControl(parent, task, className = 'q-select-slot') {
+  const slot = document.createElement('span');
+  slot.className = className;
+  const box = document.createElement('input');
+  box.type = 'checkbox';
+  box.className = 'q-select-input';
+  box.checked = queueSelectedIds.has(task.localId);
+  box.title = '选择这条任务';
+  box.addEventListener('click', e => e.stopPropagation());
+  box.addEventListener('change', () => toggleQueueSelection(task, box.checked));
+  slot.appendChild(box);
+  parent.appendChild(slot);
+  return slot;
+}
+
+async function deleteTaskBatch(list, label) {
+  const target = list.filter(Boolean);
+  if (!target.length) { toast(`没有可删除的${label}`, 'bad'); return; }
+  const activeCount = target.filter(t => ACTIVE_TASK_STATUSES.has(t.status)).length;
+  const extra = activeCount ? `其中 ${activeCount} 条仍在进行中，上游任务可能继续运行并计费。` : '';
+  if (!(await uiConfirm(`删除 ${target.length} 条${label}？${extra}`, { okText: '删除', danger: true }))) return;
+  for (const t of target) await deleteTaskRecord(t, { silent: true });
+  queueSelectedIds.clear();
+  queueSelectMode = false;
+  renderQueue();
+  renderVault();
+  renderRecent();
+  toast(`已删除 ${target.length} 条${label}`, 'ok');
+}
+
 async function deleteTaskRecord(task, opts = {}) {
   if (!task?.localId) return;
   deletedTaskIds.add(task.localId);
@@ -1430,14 +1495,9 @@ function addQueueDeleteButton(parent, task, className = 'q-delete') {
 }
 
 function renderQueue() {
-  const filtered = tasks.filter(t => {
-    if (queueFilter === 'all') return true;
-    if (queueFilter === 'video' || queueFilter === 'image') return t.kind === queueFilter;
-    if (queueFilter === 'active') return ACTIVE_TASK_STATUSES.has(t.status);
-    if (queueFilter === 'completed') return t.status === 'completed';
-    if (queueFilter === 'failed') return t.status === 'failed';
-    return true;
-  });
+  pruneQueueSelection();
+  syncQueueBulkButton();
+  const filtered = filteredQueueTasks();
 
   // group 计数 — 用于在行/卡片上显示 "× N"
   const groupCounts = {};
@@ -1459,7 +1519,7 @@ function renderQueue() {
       for (const t of filtered) {
         const li = document.createElement('li');
         const row = document.createElement('div');
-        row.className = 'queue-row';
+        row.className = 'queue-row' + (queueSelectMode ? ' is-selecting' : '');
         const dur = t.completedAt ? fmtDuration(t.completedAt - t.createdAt) : (t.status === 'in_progress' ? `${t.progress || 0}%` : fmtTime(t.createdAt));
         const groupTag = t.groupId ? `<span class="q-group">组 ×${groupCounts[t.groupId]}</span>` : '';
         const variantTag = t.variantLabel ? ` · <span class="muted">${escapeHtml(t.variantLabel)}</span>` : '';
@@ -1471,8 +1531,18 @@ function renderQueue() {
           <span class="q-status q-${t.status}"><span class="dot"></span>${STATUS_TEXT[t.status] || t.status}</span>
           <span class="q-open">${dur}</span>
         `;
+        if (queueSelectMode) row.prepend(addQueueSelectControl(document.createDocumentFragment(), t));
         addQueueDeleteButton(row, t);
-        row.addEventListener('click', () => openModal(t));
+        row.addEventListener('click', () => {
+          if (queueSelectMode) {
+            const selected = !queueSelectedIds.has(t.localId);
+            toggleQueueSelection(t, selected);
+            const box = row.querySelector('.q-select-input');
+            if (box) box.checked = selected;
+            return;
+          }
+          openModal(t);
+        });
         li.appendChild(row);
         list.appendChild(li);
       }
@@ -1484,9 +1554,10 @@ function renderQueue() {
     } else {
       for (const t of filtered) {
         const card = document.createElement('div');
-        card.className = 'qg-card';
+        card.className = 'qg-card' + (queueSelectMode ? ' is-selecting' : '');
         const media = document.createElement('div');
         media.className = 'qg-media';
+        if (queueSelectMode) addQueueSelectControl(media, t, 'q-card-select');
         if (t.kind === 'image' && (t.imageDataUrl || t.imageUrl)) {
           const img = document.createElement('img');
           img.src = t.imageDataUrl || t.imageUrl;
@@ -1523,7 +1594,16 @@ function renderQueue() {
           <div class="qg-meta">${escapeHtml(t.model)}${t.variantLabel ? ' · ' + escapeHtml(t.variantLabel) : ''}</div>
         `;
         card.appendChild(cap);
-        card.addEventListener('click', () => openModal(t));
+        card.addEventListener('click', () => {
+          if (queueSelectMode) {
+            const selected = !queueSelectedIds.has(t.localId);
+            toggleQueueSelection(t, selected);
+            const box = card.querySelector('.q-select-input');
+            if (box) box.checked = selected;
+            return;
+          }
+          openModal(t);
+        });
         grid.appendChild(card);
       }
     }
@@ -2555,11 +2635,31 @@ function bindUI() {
     renderQueue();
   }));
   $('#queueRefresh')?.addEventListener('click', () => refreshTaskState({ manual: true }));
+  $('#queueBulkDelete')?.addEventListener('click', async () => {
+    if (!queueSelectMode) {
+      queueSelectMode = true;
+      queueSelectedIds.clear();
+      renderQueue();
+      return;
+    }
+    const selected = tasks.filter(t => queueSelectedIds.has(t.localId));
+    if (!selected.length) {
+      queueSelectMode = false;
+      renderQueue();
+      return;
+    }
+    await deleteTaskBatch(selected, '选中任务');
+  });
+  $('#queueDeleteFailed')?.addEventListener('click', async () => {
+    await deleteTaskBatch(tasks.filter(t => t.status === 'failed'), '失败任务');
+  });
   $('#queueClear').addEventListener('click', async () => {
     const ended = tasks.filter(t => FINAL_TASK_STATUSES.has(t.status));
     if (!ended.length) { toast('没有可清理的已结束任务', 'bad'); return; }
     if (!(await uiConfirm(`清理 ${ended.length} 条已结束任务？会删除已完成、失败和已生成未保存记录。`, { okText: '清理', danger: true }))) return;
     for (const t of ended) await deleteTaskRecord(t, { silent: true });
+    queueSelectedIds.clear();
+    queueSelectMode = false;
     renderQueue();
     renderVault();
     renderRecent();

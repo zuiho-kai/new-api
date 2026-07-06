@@ -603,6 +603,8 @@ input, select, textarea { font: inherit; color: inherit; }
   letter-spacing: 0.1em;
 }
 .btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+.btn-ghost.btn-danger { border-color: color-mix(in srgb, var(--bad) 42%, var(--rule)); color: var(--bad); }
+.btn-ghost.btn-danger:hover { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, transparent); }
 
 .action-aux {
   font-family: var(--ff-mono);
@@ -619,7 +621,7 @@ input, select, textarea { font: inherit; color: inherit; }
   gap: 12px;
   margin-bottom: 14px;
 }
-.queue-tools { display: flex; align-items: center; gap: 10px; }
+.queue-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 
 .queue-grid {
   display: grid;
@@ -722,7 +724,19 @@ input, select, textarea { font: inherit; color: inherit; }
   cursor: pointer;
   transition: background .1s ease;
 }
+.queue-row.is-selecting { grid-template-columns: 28px 60px 70px 1fr 100px 100px 64px 52px; }
 .queue-row:hover { background: var(--rule-soft); }
+.q-select-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.q-select-input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ink);
+  cursor: pointer;
+}
 .q-folio { color: var(--ink); font-weight: 500; }
 .q-kind {
   display: inline-block;
@@ -804,6 +818,19 @@ input, select, textarea { font: inherit; color: inherit; }
 .qg-card:hover .q-card-delete,
 .q-card-delete:focus-visible { opacity: 1; }
 .q-card-delete:hover { background: var(--bad); border-color: var(--bad); }
+.q-card-select {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 4;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-xs);
+  background: rgba(20,17,13,0.74);
+}
+.qg-card.is-selecting .qg-badge { top: 38px; }
 .queue-empty {
   padding: 60px 20px;
   text-align: center;
@@ -813,7 +840,10 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 @media (max-width: 720px) {
   .queue-row { grid-template-columns: 50px 56px 1fr 70px 44px; }
+  .queue-row.is-selecting { grid-template-columns: 26px 50px 56px 1fr 70px 44px; }
   .q-model, .q-open { display: none; }
+  .queue-toolbar { align-items: flex-start; flex-direction: column; }
+  .queue-tools { justify-content: flex-start; }
 }
 
 /* ---------------------------------------------------------- VAULT PANE */
