@@ -95,6 +95,24 @@ export function useTopNavLinks(): TopNavLink[] {
     }
   }
 
+  links.push(
+    {
+      title: t('Online Agent'),
+      href: 'https://code.viwo50when4.xyz/api_web_agent/',
+      external: true,
+    },
+    {
+      title: t('Tavern'),
+      href: 'https://code.viwo50when4.xyz:8443/',
+      external: true,
+    },
+    {
+      title: t('Video/Image Studio'),
+      href: 'https://code.viwo50when4.xyz/zaoyin/',
+      external: true,
+    }
+  )
+
   // About
   if (modules?.about !== false) {
     links.push({ title: t('About'), href: '/about' })
