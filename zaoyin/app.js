@@ -92,6 +92,7 @@ async function saveSettings() {
 // ---------- 任务缓存（in-memory mirror，渲染用） ----------
 let tasks = [];        // 与 IndexedDB 同步
 let editionNo = 0;
+const submitLocks = { video: false, image: false };
 
 async function reloadTasks(opts = {}) {
   tasks = await Tasks.list();
@@ -1228,8 +1229,9 @@ async function apiFetch(target, path, opts) {
 
 function setBusy(kind, busy) {
   const btn = kind === 'video' ? $('#vSubmit') : $('#iSubmit');
-  btn.disabled = busy;
-  btn.classList.toggle('is-busy', busy);
+  const active = busy || !!submitLocks[kind];
+  btn.disabled = active;
+  btn.classList.toggle('is-busy', active);
 }
 
 // ============================================================
@@ -2275,54 +2277,72 @@ function updateAbBadge(mode) {
 }
 
 async function maybeABSubmitVideo() {
-  if (!abState.video.enabled || abVariantCount('video') <= 1) {
-    return submitVideo();
+  if (submitLocks.video) { toast('视频正在生成中，请稍候', 'warn'); return null; }
+  submitLocks.video = true;
+  setBusy('video', true);
+  try {
+    if (!abState.video.enabled || abVariantCount('video') <= 1) {
+      return await submitVideo();
+    }
+    const body = buildVideoBody();
+    if (!body.prompt) { toast('提示词不能为空', 'bad'); return null; }
+    if (!backendCfg.videoUpstream) { toast('视频上游未配置', 'bad'); return null; }
+    const variants = cartesian(abState.video.dims);
+    const groupId = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    toast(`提交 ${variants.length} 个变体并行生成…`, 'ok');
+    const refList = refs.video.slice();
+    await Promise.all(variants.map(v => {
+      const merged = { ...body, ...v };
+      const label = Object.entries(v).map(([k, val]) => `${k}=${val}`).join(' · ');
+      return submitVideoRaw(merged, refList, { provider: vProvider, groupId, variantLabel: label }).catch(() => null);
+    }));
+    return null;
+  } finally {
+    submitLocks.video = false;
+    setBusy('video', false);
   }
-  const body = buildVideoBody();
-  if (!body.prompt) { toast('提示词不能为空', 'bad'); return; }
-  if (!backendCfg.videoUpstream) { toast('视频上游未配置', 'bad'); return; }
-  const variants = cartesian(abState.video.dims);
-  const groupId = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-  toast(`提交 ${variants.length} 个变体并行生成…`, 'ok');
-  const refList = refs.video.slice();
-  await Promise.all(variants.map(v => {
-    const merged = { ...body, ...v };
-    const label = Object.entries(v).map(([k, val]) => `${k}=${val}`).join(' · ');
-    return submitVideoRaw(merged, refList, { provider: vProvider, groupId, variantLabel: label }).catch(() => null);
-  }));
 }
 
 async function maybeABSubmitImage() {
-  if (!abState.image.enabled || abVariantCount('image') <= 1) {
-    return submitImage();
-  }
-  const built = buildImageRequest();
-  if (!built.prompt) { toast('提示词不能为空', 'bad'); return; }
-  if (!backendCfg.imageConfigured) { toast('图像上游未配置', 'bad'); return; }
-  if (iProvider === 'openai' && iEndpoint === 'edits' && !refs.image.length) {
-    toast('图生图模式必须传至少 1 张底图', 'bad');
-    return;
-  }
-  const variants = cartesian(abState.image.dims);
-  const groupId = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-  toast(`提交 ${variants.length} 个变体并行生成…`, 'ok');
-  const refList = refs.image.slice();
-
-  const tasks2 = variants.map(v => {
-    const b = JSON.parse(JSON.stringify(built.body));
-    if (iProvider === 'openai') {
-      Object.assign(b, v);
-    } else {
-      if (v.model) b.__model = v.model;
-      if (!b.generation_config) b.generation_config = { response_modalities: ['IMAGE'], image_config: {} };
-      if (!b.generation_config.image_config) b.generation_config.image_config = {};
-      if (v.aspect_ratio) b.generation_config.image_config.aspect_ratio = v.aspect_ratio;
-      if (v.image_size) b.generation_config.image_config.image_size = v.image_size;
+  if (submitLocks.image) { toast('图像正在生成中，请稍候', 'warn'); return null; }
+  submitLocks.image = true;
+  setBusy('image', true);
+  try {
+    if (!abState.image.enabled || abVariantCount('image') <= 1) {
+      return await submitImage();
     }
-    const label = Object.entries(v).map(([k, val]) => `${k}=${val}`).join(' · ');
-    return submitImageRaw(b, refList, { provider: iProvider, endpoint: iEndpoint, groupId, variantLabel: label }).catch(() => null);
-  });
-  await Promise.all(tasks2);
+    const built = buildImageRequest();
+    if (!built.prompt) { toast('提示词不能为空', 'bad'); return null; }
+    if (!backendCfg.imageConfigured) { toast('图像上游未配置', 'bad'); return null; }
+    if (iProvider === 'openai' && iEndpoint === 'edits' && !refs.image.length) {
+      toast('图生图模式必须传至少 1 张底图', 'bad');
+      return null;
+    }
+    const variants = cartesian(abState.image.dims);
+    const groupId = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    toast(`提交 ${variants.length} 个变体并行生成…`, 'ok');
+    const refList = refs.image.slice();
+
+    const tasks2 = variants.map(v => {
+      const b = JSON.parse(JSON.stringify(built.body));
+      if (iProvider === 'openai') {
+        Object.assign(b, v);
+      } else {
+        if (v.model) b.__model = v.model;
+        if (!b.generation_config) b.generation_config = { response_modalities: ['IMAGE'], image_config: {} };
+        if (!b.generation_config.image_config) b.generation_config.image_config = {};
+        if (v.aspect_ratio) b.generation_config.image_config.aspect_ratio = v.aspect_ratio;
+        if (v.image_size) b.generation_config.image_config.image_size = v.image_size;
+      }
+      const label = Object.entries(v).map(([k, val]) => `${k}=${val}`).join(' · ');
+      return submitImageRaw(b, refList, { provider: iProvider, endpoint: iEndpoint, groupId, variantLabel: label }).catch(() => null);
+    });
+    await Promise.all(tasks2);
+    return null;
+  } finally {
+    submitLocks.image = false;
+    setBusy('image', false);
+  }
 }
 
 function deriveEndpoint(t) {
