@@ -459,6 +459,7 @@ let vRefMax = 4;
 // ============================================================
 const IMAGE_PROVIDERS = {
   openai: { models: ['gpt-image-2'] },
+  grok: { models: [] },
   gemini: { models: ['nanobananapro', 'nanobanana2'] },
 };
 const IMAGE_SIZES_OPENAI = ['1024x1024','1536x1024','1024x1536','2048x2048','1792x1024','1024x1792','3840x2160','1536x2752','2752x1536'];
@@ -548,25 +549,57 @@ async function syncModelsFromModelSquare() {
       .map(modelNameOf)
       .filter(name => /^gpt-image-/i.test(name))
       .sort((a, b) => b.localeCompare(a));
-    IMAGE_PROVIDERS.openai.models = openaiImageModels;
+    if (openaiImageModels.length) IMAGE_PROVIDERS.openai.models = openaiImageModels;
+
+    const grokImageModels = rows
+      .map(modelNameOf)
+      .filter(name => /(?:grok.*imagine|imagine.*grok)/i.test(name))
+      .sort((a, b) => b.localeCompare(a));
+    if (grokImageModels.length) IMAGE_PROVIDERS.grok.models = grokImageModels;
   } catch (err) {
     console.warn('模型广场同步失败，继续使用内置模型列表', err);
   }
 }
 
 let iProvider = 'openai';
+let iMode = 'text_to_image';
 let iQuality = 'low';
 let iImageSize = '1K';
 let iCount = 1;
+const imageModelByProvider = {};
+
+function isOpenAIImageProvider(provider = iProvider) {
+  return provider === 'openai' || provider === 'grok';
+}
+
+function renderImageModelOptions() {
+  const list = $('#iModelOptions');
+  list.innerHTML = '';
+  for (const model of IMAGE_PROVIDERS[iProvider].models) {
+    const option = document.createElement('option');
+    option.value = model;
+    list.appendChild(option);
+  }
+}
 
 function setImageProvider(p) {
+  if (IMAGE_PROVIDERS[iProvider]) imageModelByProvider[iProvider] = $('#iModel').value.trim();
   iProvider = p;
   $$('#iProvider .seg-opt').forEach(b => b.classList.toggle('is-active', b.dataset.val === p));
-  fillSelect($('#iModel'), IMAGE_PROVIDERS[p].models, $('#iModel').value);
+  renderImageModelOptions();
+  $('#iModel').value = imageModelByProvider[p] || IMAGE_PROVIDERS[p].models[0] || '';
   updateImageFields();
 }
+
+function setImageMode(mode) {
+  iMode = mode;
+  $$('#iMode .seg-opt').forEach(b => b.classList.toggle('is-active', b.dataset.val === mode));
+  $('#iRefWrap').hidden = mode !== 'image_to_image';
+  $('#iRefHint').textContent = '必填，最多 6 张';
+}
+
 function updateImageFields() {
-  if (iProvider === 'openai') {
+  if (isOpenAIImageProvider()) {
     $('#iSizeWrap').hidden        = false;
     $('#iAspectWrap').hidden      = true;
     $('#iImageSizeWrap').hidden   = true;
@@ -584,8 +617,12 @@ function updateImageFields() {
   }
 }
 
-function resolveOpenAIImageEndpoint(refList = refs.image) {
-  return refList.length ? 'edits' : 'generations';
+function resolveOpenAIImageEndpoint() {
+  return iMode === 'image_to_image' ? 'edits' : 'generations';
+}
+
+function activeImageRefs() {
+  return iMode === 'image_to_image' ? refs.image.slice() : [];
 }
 
 // ============================================================
@@ -922,9 +959,9 @@ async function pollVideo(task) {
 // ============================================================
 function buildImageRequest() {
   const prompt = $('#iPrompt').value.trim();
-  const model = $('#iModel').value;
+  const model = $('#iModel').value.trim();
   let path, body;
-  if (iProvider === 'openai') {
+  if (isOpenAIImageProvider()) {
     const endpoint = resolveOpenAIImageEndpoint();
     path = endpoint === 'edits' ? '/v1/images/edits' : '/v1/images/generations';
     body = {
@@ -954,11 +991,13 @@ function buildImageRequest() {
 async function submitImage() {
   const { body, model, prompt } = buildImageRequest();
   if (!prompt) { toast('提示词不能为空', 'bad'); return; }
-  if (!model) { toast('当前引擎暂无可用模型', 'bad'); return; }
+  if (!model) { toast('请选择或输入模型名称', 'bad'); return; }
+  if (iMode === 'image_to_image' && !refs.image.length) { toast('图生图模式请先添加参考图', 'bad'); return; }
   if (!backendCfg.imageConfigured) { toast('图像上游未配置', 'bad'); return; }
+  const refList = activeImageRefs();
   const opts = { provider: iProvider, endpoint: body.__endpoint || 'generations' };
-  if (iProvider === 'openai' && iCount > 1) opts.n = iCount;
-  await submitImageRaw(body, refs.image.slice(), opts);
+  if (isOpenAIImageProvider() && iCount > 1) opts.n = iCount;
+  await submitImageRaw(body, refList, opts);
 }
 
 async function imageJobFetch(path, body, localIds) {
@@ -976,7 +1015,7 @@ async function imageJobFetch(path, body, localIds) {
 }
 
 async function applyImageResponseToTasks(provider, tasksList, data) {
-  if (provider === 'openai') {
+  if (isOpenAIImageProvider(provider)) {
     const items = data?.data || [];
     for (let i = 0; i < tasksList.length; i++) {
       const t = tasksList[i];
@@ -1068,11 +1107,11 @@ async function restoreImageJobs() {
 
 async function submitImageRaw(rawBody, refList, opts = {}) {
   const provider = opts.provider || iProvider;
-  const endpoint = opts.endpoint || (provider === 'openai' ? resolveOpenAIImageEndpoint(refList) : 'generations');
+  const endpoint = opts.endpoint || (isOpenAIImageProvider(provider) ? resolveOpenAIImageEndpoint() : 'generations');
   const model = rawBody.model || (rawBody.contents ? null : null);
   const n = Math.max(1, Math.min(6, parseInt(opts.n || rawBody.n || 1, 10) || 1));
   let path, body;
-  if (provider === 'openai') {
+  if (isOpenAIImageProvider(provider)) {
     path = endpoint === 'edits' ? '/v1/images/edits' : '/v1/images/generations';
     body = { ...rawBody };
     delete body.__endpoint;
@@ -1109,9 +1148,9 @@ async function submitImageRaw(rawBody, refList, opts = {}) {
     body.__model = modelName;
   }
 
-  const promptText = provider === 'openai' ? body.prompt : (body.contents[0].parts.find(p => p.text)?.text || '');
-  const modelLabel = provider === 'openai' ? body.model : (body.__model || model);
-  const sizeLabel = provider === 'openai'
+  const promptText = isOpenAIImageProvider(provider) ? body.prompt : (body.contents[0].parts.find(p => p.text)?.text || '');
+  const modelLabel = isOpenAIImageProvider(provider) ? body.model : (body.__model || model);
+  const sizeLabel = isOpenAIImageProvider(provider)
     ? body.size
     : `${body.generation_config.image_config.aspect_ratio} · ${body.generation_config.image_config.image_size}`;
 
@@ -1129,7 +1168,7 @@ async function submitImageRaw(rawBody, refList, opts = {}) {
       model: modelLabel,
       prompt: promptText,
       size: sizeLabel,
-      params: provider === 'openai' ? { ...body, __endpoint: endpoint } : body,
+      params: isOpenAIImageProvider(provider) ? { ...body, __endpoint: endpoint } : body,
       groupId,
       retryOf: opts.retryOf || null,
       variantLabel: opts.variantLabel || (n > 1 ? `${i + 1}/${n}` : null),
@@ -2225,12 +2264,16 @@ function abFieldsFor(mode) {
       }] : []),
     ];
   } else {
-    if (iProvider === 'openai') {
+    if (isOpenAIImageProvider()) {
+      const models = uniqueModelOptions([
+        ...IMAGE_PROVIDERS[iProvider].models.map(model => ({ id: model, label: model })),
+        { id: $('#iModel').value.trim(), label: $('#iModel').value.trim() },
+      ]);
       return [
         {
           key: 'model',
           name: '模型',
-          candidates: IMAGE_PROVIDERS.openai.models.map(m => ({ value: m, label: m })),
+          candidates: models.map(model => ({ value: model.id, label: model.label })),
         },
         {
           key: 'quality',
@@ -2391,16 +2434,18 @@ async function maybeABSubmitImage() {
     }
     const built = buildImageRequest();
     if (!built.prompt) { toast('提示词不能为空', 'bad'); return null; }
+    if (!built.model) { toast('请选择或输入模型名称', 'bad'); return null; }
+    if (iMode === 'image_to_image' && !refs.image.length) { toast('图生图模式请先添加参考图', 'bad'); return null; }
     if (!backendCfg.imageConfigured) { toast('图像上游未配置', 'bad'); return null; }
-    const endpoint = iProvider === 'openai' ? (built.body.__endpoint || 'generations') : 'generations';
+    const endpoint = isOpenAIImageProvider() ? (built.body.__endpoint || 'generations') : 'generations';
     const variants = cartesian(abState.image.dims);
     const groupId = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
     toast(`提交 ${variants.length} 个变体并行生成…`, 'ok');
-    const refList = refs.image.slice();
+    const refList = activeImageRefs();
 
     const tasks2 = variants.map(v => {
       const b = JSON.parse(JSON.stringify(built.body));
-      if (iProvider === 'openai') {
+      if (isOpenAIImageProvider()) {
         Object.assign(b, v);
       } else {
         if (v.model) b.__model = v.model;
@@ -2422,7 +2467,7 @@ async function maybeABSubmitImage() {
 
 function deriveEndpoint(t) {
   // OpenAI 系：原 path 是 /v1/images/edits 或 /v1/images/generations
-  if (t.provider !== 'openai') return null;
+  if (!isOpenAIImageProvider(t.provider)) return null;
   const p = (t.params && (t.params.__endpoint || '')) || '';
   if (p) return p;
   // 兜底：根据 image 字段判断
@@ -2448,11 +2493,14 @@ function loadTaskIntoForm(t) {
     updatePromptCount('video');
   } else {
     setImageProvider(t.provider || 'openai');
+    const endpoint = deriveEndpoint(t);
+    setImageMode(endpoint === 'edits' || (!endpoint && (t.refs || []).length) ? 'image_to_image' : 'text_to_image');
     if (t.model) {
       $('#iModel').value = t.model;
+      imageModelByProvider[iProvider] = t.model;
       updateImageFields();
     }
-    if (t.provider === 'openai') {
+    if (isOpenAIImageProvider(t.provider)) {
       if (t.params?.size) $('#iSize').value = t.params.size;
       if (t.params?.quality) {
         iQuality = t.params.quality;
@@ -2673,7 +2721,11 @@ function bindUI() {
 
   // image provider seg
   $$('#iProvider .seg-opt').forEach(b => b.addEventListener('click', () => setImageProvider(b.dataset.val)));
-  $('#iModel').addEventListener('change', updateImageFields);
+  $$('#iMode .seg-opt').forEach(b => b.addEventListener('click', () => setImageMode(b.dataset.val)));
+  $('#iModel').addEventListener('input', () => {
+    imageModelByProvider[iProvider] = $('#iModel').value.trim();
+    updateImageFields();
+  });
   $$('#iQuality .seg-opt').forEach(b => b.addEventListener('click', () => {
     iQuality = b.dataset.val;
     $$('#iQuality .seg-opt').forEach(x => x.classList.toggle('is-active', x === b));
@@ -2973,6 +3025,7 @@ async function init() {
   bindUI();
   setVideoProvider('sora');
   setImageProvider('openai');
+  setImageMode('text_to_image');
   setMode('video');
   setPane('compose');
   // 恢复 queue view
@@ -6129,8 +6182,9 @@ function openCodeForCurrentForm(mode) {
     const send = { ...body };
     delete send.__endpoint;
     delete send.__model;
-    if (refs.image.length) {
-      if (iProvider === 'openai') send.image = refs.image.map(r => r.src);
+    const refList = activeImageRefs();
+    if (refList.length) {
+      if (isOpenAIImageProvider()) send.image = refList.map(r => r.src);
       // gemini provider 在 raw body 里已经有 parts，这里不放图保持代码简洁
     }
     codeContext = { kind: 'image', path, body: send, provider: iProvider };
@@ -6144,7 +6198,7 @@ function openCodeForTask(t) {
     codeContext = { kind: 'video', path: '/v1/videos', body: t.params, taskId: t.taskId };
   } else {
     let path;
-    if (t.provider === 'openai') {
+    if (isOpenAIImageProvider(t.provider)) {
       const ep = (t.params && t.params.__endpoint) || 'generations';
       path = ep === 'edits' ? '/v1/images/edits' : '/v1/images/generations';
     } else {

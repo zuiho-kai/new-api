@@ -79,7 +79,7 @@
     <div class="sidebar-section footnote">
       <div class="kicker">期号</div>
       <p class="colophon">第 <span id="editionNo">001</span> 号 · <span id="editionDate"></span></p>
-      <p class="colophon-meta">Sora V3 · Veo 3.1 · gpt-image-2 · nanobanana</p>
+      <p class="colophon-meta">Sora V3 · Veo 3.1 · gpt-image-2 · Imagine · nanobanana</p>
     </div>
   </aside>
 
@@ -210,13 +210,23 @@
           <label class="lbl">引擎</label>
           <div class="seg" id="iProvider">
             <button type="button" class="seg-opt is-active" data-val="openai">OpenAI · gpt-image-2</button>
+            <button type="button" class="seg-opt" data-val="grok">Grok · Imagine</button>
             <button type="button" class="seg-opt" data-val="gemini">Gemini · nanobanana</button>
           </div>
         </div>
 
         <div class="field">
-          <label class="lbl">模型</label>
-          <select class="sel" id="iModel"></select>
+          <label class="lbl">模式</label>
+          <div class="seg" id="iMode">
+            <button type="button" class="seg-opt is-active" data-val="text_to_image">文生图</button>
+            <button type="button" class="seg-opt" data-val="image_to_image">图生图</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="lbl" for="iModel">模型</label>
+          <input class="inp" id="iModel" list="iModelOptions" autocomplete="off" placeholder="选择或输入模型名称">
+          <datalist id="iModelOptions"></datalist>
         </div>
 
         <div class="field" id="iSizeWrap">
@@ -248,7 +258,7 @@
         </div>
 
         <div class="field" id="iCountWrap">
-          <label class="lbl">张数 <span class="muted">（gpt-image-2 单次最多 6 张）</span></label>
+          <label class="lbl">张数 <span class="muted">（单次最多 6 张）</span></label>
           <div class="seg" id="iCount">
             <button type="button" class="seg-opt is-active" data-val="1">1</button>
             <button type="button" class="seg-opt" data-val="2">2</button>
@@ -258,8 +268,8 @@
           </div>
         </div>
 
-        <div class="field field-wide">
-          <label class="lbl">参考图 <span class="muted" id="iRefHint">最多 6 张</span></label>
+        <div class="field field-wide" id="iRefWrap" hidden>
+          <label class="lbl">参考图 <span class="muted" id="iRefHint">必填，最多 6 张</span></label>
           <div class="dropzone" id="iDrop">
             <input type="file" id="iFile" accept="image/*" multiple hidden>
             <div class="dz-row">
@@ -637,6 +647,6 @@
   </div>
 </div>
 
-<script src="./app.js?v=20260526-2" type="module"></script>
+<script src="./app.js?v=20260711-1" type="module"></script>
 </body>
 </html>
