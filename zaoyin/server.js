@@ -263,9 +263,14 @@ function httpPostJson(urlStr, body, headers = {}) {
 
 async function runImageRequest({ imagePath, body, authHeader, localIds = [] }) {
   const upstream = UPSTREAM.replace(/\/$/, '') + imagePath;
-  const upstreamResp = imagePath === '/v1/images/edits'
-    ? await httpPostImageEdit(upstream, body || {}, authHeader)
-    : await httpPostJson(upstream, body || {}, authHeader ? { Authorization: authHeader } : {});
+  const requestBody = imagePath === '/v1/images/edits'
+    ? normalizeImageEditBody(body || {})
+    : (body || {});
+  const upstreamResp = await httpPostJson(
+    upstream,
+    requestBody,
+    authHeader ? { Authorization: authHeader } : {},
+  );
   const contentType = String(upstreamResp.headers['content-type'] || 'application/json');
   const responseText = upstreamResp.body.toString('utf8');
   const record = {
@@ -289,62 +294,30 @@ async function runImageRequest({ imagePath, body, authHeader, localIds = [] }) {
   return { ...record, responseText };
 }
 
-function dataUrlToBlob(dataUrl) {
-  const matched = /^data:([^;,]+)(?:;[^,]*)?;base64,(.+)$/i.exec(String(dataUrl || ''));
-  if (!matched) return null;
-  return new Blob([Buffer.from(matched[2], 'base64')], { type: matched[1] || 'application/octet-stream' });
-}
+function normalizeImageEditBody(body) {
+  const sources = [];
+  const addSource = (value) => {
+    if (typeof value === 'string' && value.trim()) {
+      sources.push(value);
+      return;
+    }
+    if (value && typeof value === 'object') {
+      addSource(value.image_url);
+    }
+  };
+  const addValues = (value) => {
+    if (Array.isArray(value)) value.forEach(addSource);
+    else addSource(value);
+  };
 
-async function imageValueToBlob(value) {
-  if (typeof value !== 'string') return null;
-  const dataBlob = dataUrlToBlob(value);
-  if (dataBlob) return dataBlob;
-  if (!/^https?:\/\//i.test(value)) return null;
+  addValues(body.image);
+  addValues(body.images);
+  if (!sources.length) return { ...body };
 
-  const fetched = await fetch(value, {
-    headers: { 'User-Agent': 'zaoyin/1.0', Accept: 'image/*,*/*' },
-    signal: AbortSignal.timeout(30000),
-  });
-  if (!fetched.ok) throw new Error(`failed to fetch image url (${fetched.status})`);
-  return fetched.blob();
-}
-
-async function httpPostImageEdit(urlStr, body, authHeader = '') {
-  const form = new FormData();
-  const skipFields = new Set(['image', 'images', '__endpoint', '__model']);
-  for (const [key, value] of Object.entries(body || {})) {
-    if (skipFields.has(key) || value == null) continue;
-    if (typeof value === 'object') form.append(key, JSON.stringify(value));
-    else form.append(key, String(value));
-  }
-
-  const images = [];
-  if (Array.isArray(body.image)) images.push(...body.image);
-  else if (body.image) images.push(body.image);
-  if (Array.isArray(body.images)) images.push(...body.images);
-  else if (body.images) images.push(body.images);
-
-  for (let index = 0; index < images.length; index++) {
-    const blob = await imageValueToBlob(images[index]);
-    if (!blob) continue;
-    const ext = String(blob.type || '').includes('jpeg') ? 'jpg'
-      : String(blob.type || '').includes('webp') ? 'webp'
-        : 'png';
-    form.append('image', blob, `reference-${index + 1}.${ext}`);
-  }
-
-  const headers = { 'User-Agent': 'zaoyin/1.0', Accept: 'application/json' };
-  if (authHeader) headers.Authorization = authHeader;
-  const resp = await fetch(urlStr, {
-    method: 'POST',
-    headers,
-    body: form,
-    signal: AbortSignal.timeout(10 * 60 * 1000),
-  });
   return {
-    status: resp.status,
-    headers: Object.fromEntries(resp.headers.entries()),
-    body: Buffer.from(await resp.arrayBuffer()),
+    ...body,
+    image: sources[0],
+    images: sources.map(imageUrl => ({ image_url: imageUrl })),
   };
 }
 
