@@ -1,0 +1,47 @@
+name: Client identity database verification
+on:
+  push:
+    branches: [codex/verify-client-identity]
+permissions:
+  contents: read
+jobs:
+  databases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test-only
+          MYSQL_DATABASE: client_identity_test
+        ports: ['3306:3306']
+        options: --health-cmd="mysqladmin ping -ptest-only" --health-interval=5s --health-timeout=5s --health-retries=30
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test-only
+          POSTGRES_DB: client_identity_test
+        ports: ['5432:5432']
+        options: --health-cmd="pg_isready -U postgres" --health-interval=5s --health-timeout=5s --health-retries=30
+      clickhouse:
+        image: clickhouse/clickhouse-server:25.8
+        env:
+          CLICKHOUSE_DB: client_identity_test
+          CLICKHOUSE_USER: tester
+          CLICKHOUSE_PASSWORD: test-only
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: '1'
+        ports: ['9000:9000']
+    env:
+      TEST_MYSQL_DSN: root:test-only@tcp(127.0.0.1:3306)/client_identity_test?charset=utf8mb4&parseTime=True&loc=Local
+      TEST_POSTGRES_DSN: host=127.0.0.1 port=5432 user=postgres password=test-only dbname=client_identity_test sslmode=disable
+      TEST_CLICKHOUSE_DSN: clickhouse://tester:test-only@127.0.0.1:9000/client_identity_test
+      GOWORK: 'off'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: mkdir -p web/dist && touch web/dist/index.html
+      - run: go test ./model ./middleware ./service ./controller ./router -run 'TestClient' -count=1 -v
+      - run: go build ./...
