@@ -125,17 +125,6 @@ func TestClientLogDatabaseMatrix(t *testing.T) {
 			assert.Contains(t, logs[0].Other, "Codex Desktop/1.0")
 			assert.NotContains(t, logs[0].Other, "custom-tool")
 			logs, total, err = GetUserLogs(41, 0, 0, 0, "", "", 0, 10, "", "", "", "unrecorded")
-			if dialect == "clickhouse" && err != nil {
-				for _, query := range []string{
-					"SELECT * FROM logs WHERE user_id = 41 ORDER BY created_at DESC, request_id DESC LIMIT 10",
-					"SELECT id,user_id,created_at,type,content,username,token_name,model_name,quota,prompt_tokens,completion_tokens,use_time,is_stream,channel_id,token_id,`group`,ip,request_id,upstream_request_id,other FROM logs WHERE user_id = 41 ORDER BY created_at DESC, request_id DESC LIMIT 10",
-					"SELECT * FROM logs WHERE user_id = 41 AND client_family = '' ORDER BY created_at DESC, request_id DESC LIMIT 10 SETTINGS query_plan_optimize_lazy_materialization=0",
-				} {
-					var result []Log
-					diagnosticErr := db.Raw(query).Scan(&result).Error
-					t.Logf("DIAGNOSTIC %s: rows=%d error=%v", query, len(result), diagnosticErr)
-				}
-			}
 			require.NoError(t, err)
 			assert.EqualValues(t, 1, total)
 			require.Len(t, logs, 1)
