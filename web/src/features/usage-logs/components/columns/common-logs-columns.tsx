@@ -370,9 +370,7 @@ export function useCommonLogsColumns(
                   className='-ml-1.5 !text-base [&_span]:!text-base'
                 />
               </div>
-              <ClientIdentity
-                client={parseLogOther(log.other)?.client}
-              />
+              <ClientIdentity client={parseLogOther(log.other)?.client} />
             </div>
           )
         },

@@ -99,7 +99,7 @@ func TestClientLogDatabaseMatrix(t *testing.T) {
 				require.NoError(t, db.AutoMigrate(&Log{}))
 			}
 			require.NoError(t, db.Migrator().DropColumn(&Log{}, "client_family"))
-			require.NoError(t, db.Table("logs").Create(map[string]any{"user_id": 41, "created_at": 1, "type": LogTypeConsume, "other": "{}", "request_id": "legacy"}).Error)
+			require.NoError(t, db.Omit("ClientFamily").Create(&Log{UserId: 41, CreatedAt: 1, Type: LogTypeConsume, Other: "{}", RequestId: "legacy"}).Error)
 			for range 2 {
 				if dialect == "clickhouse" {
 					require.NoError(t, migrateClickHouseLogDB())

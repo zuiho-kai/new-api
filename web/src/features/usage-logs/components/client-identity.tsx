@@ -71,9 +71,7 @@ function ClientIcon(props: { family: string }) {
   )
 }
 
-export function ClientIdentity(props: {
-  client?: ClientSnapshot
-}) {
+export function ClientIdentity(props: { client?: ClientSnapshot }) {
   const { t } = useTranslation()
   const client = props.client
   if (!client) {

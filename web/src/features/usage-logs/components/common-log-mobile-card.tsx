@@ -218,9 +218,7 @@ export function CommonLogMobileCard<TData>(props: {
             </div>
           )}
       </div>
-      {fields.time.visible && (
-        <ClientIdentity client={other?.client} />
-      )}
+      {fields.time.visible && <ClientIdentity client={other?.client} />}
       {visibleMetadata.length > 0 && (
         <div className='grid min-w-0 grid-cols-2 gap-x-4 gap-y-0.5'>
           {visibleMetadata.map((id) => {
