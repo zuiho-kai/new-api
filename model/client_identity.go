@@ -28,6 +28,9 @@ func applyClientFamilyFilter(tx *gorm.DB, family []string) *gorm.DB {
 		return tx
 	}
 	if family[0] == "unrecorded" {
+		if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
+			return tx.Where("logs.client_family = ?", "")
+		}
 		return tx.Where("logs.client_family IS NULL OR logs.client_family = ?", "")
 	}
 	return tx.Where("logs.client_family = ?", family[0])
