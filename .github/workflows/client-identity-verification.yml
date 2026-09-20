@@ -6,6 +6,10 @@ permissions:
   contents: read
 jobs:
   databases:
+    strategy:
+      fail-fast: false
+      matrix:
+        clickhouse: ['24.8', '25.8']
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -24,7 +28,7 @@ jobs:
         ports: ['5432:5432']
         options: --health-cmd="pg_isready -U postgres" --health-interval=5s --health-timeout=5s --health-retries=30
       clickhouse:
-        image: clickhouse/clickhouse-server:24.8
+        image: clickhouse/clickhouse-server:${{ matrix.clickhouse }}
         env:
           CLICKHOUSE_DB: client_identity_test
           CLICKHOUSE_USER: tester
