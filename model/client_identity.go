@@ -1,9 +1,12 @@
 package model
 
 import (
+	"strings"
+
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/QuantumNous/new-api/common"
 	"github.com/gin-gonic/gin"
+	clickhousedriver "gorm.io/driver/clickhouse"
 	"gorm.io/gorm"
 )
 
@@ -30,10 +33,14 @@ func applyClientFamilyFilter(tx *gorm.DB, family []string) *gorm.DB {
 	}
 	if family[0] == "unrecorded" {
 		if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
-			// Older parts synthesize this column from its default. Read-in-order
-			// can mix sparse and lazy blocks on ClickHouse 25.8 for this filter.
-			ctx := clickhouse.Context(tx.Statement.Context, clickhouse.WithSettings(clickhouse.Settings{"optimize_read_in_order": 0}))
-			return tx.WithContext(ctx).Where("logs.client_family = ?", "")
+			// ClickHouse 25.8 cannot merge sparse/defaulted legacy columns with
+			// lazy blocks for this filter. Keep the workaround query-local and
+			// avoid sending the newer setting to older server versions.
+			if dialect, ok := tx.Dialector.(*clickhousedriver.Dialector); ok && strings.HasPrefix(dialect.Version, "25.8.") {
+				ctx := clickhouse.Context(tx.Statement.Context, clickhouse.WithSettings(clickhouse.Settings{"query_plan_optimize_lazy_materialization": 0}))
+				tx = tx.WithContext(ctx)
+			}
+			return tx.Where("logs.client_family = ?", "")
 		}
 		return tx.Where("logs.client_family IS NULL OR logs.client_family = ?", "")
 	}
